@@ -5,7 +5,7 @@ approximatively 1mm isotropic resolution. \
 The presented tool is based on a convolutional neural network, which allows to retrieve segmentations in a very short 
 processing time (around 10 seconds with a CPU, less than a second with a GPU). \
 The segmentation model was trained by applying aggressive data augmentation, which makes it robust against variability 
-in acquisition parameters (sequence, plateform, head positioning), and in anatomy (e.g. atrophy patterns linked to 
+in acquisition parameters (sequence, platform, head positioning), and in anatomy (e.g. atrophy patterns linked to 
 ageing or different pathologies).
 
 \
@@ -54,7 +54,7 @@ Moreover, this repository relies on several external python packages (already in
 ##### 1- installing hypothalamus_seg
 In order to download the segmentation tool (but not the code), click on one of the following links (depending on your 
 operating system):
-- Linux: [hypo_seg_linux.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/ETuhuoYig9VKu2-ZceupKlIBdIpvh1brgpqX3dzANKgPlQ?e=jMnIVA)
+- Linux: [hypo_seg_linux.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EfpZzeL3Mm5LvzIdsfGYcCQBvUrroGKjiVD81BExJCmjSA?e=V2dSQu)
 - Mac: [hypo_seg_mac.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/Edm9o-EMEV1CoM45Ug5nmskB2s1KUAFAOZGAygNgfzzCxw?e=u9YVSf)
 - Windows: [hypo_seg_windows.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EaqzZMK_KjVGsNW1oSDMdAkBtPK5XQ4QUakWWC7ZjjXm7A?e=uaL8Rc)
 
@@ -63,14 +63,15 @@ Once the file is downloaded, move it to the desired location on your computer, a
 
 That's it, you can now use the CPU version of hypothalamus_seg !
 
-<br />
-
-##### 2- optional: installing the GPU version
+##### 2- optional: running hypothalamus_seg on a GPU
 The current set-up will allow you to obtain segmentations in approximatively 10s per scan (depending on your CPU).
 If you have a GPU on your machine, this can be decreased below 1s per scan by installing the required libraries (GPU
-driver, Cuda, CuDNN).\
-We show here how to install the GPU requirements for an Nvidia graphic card. We warn the user that the following 
-steps are more difficult than previously, as they may require to change some hardware settings.
+driver, Cuda, CuDNN). \
+These libraries are generally required for a GPU, and are not specific to hypothalamus_seg. In fact, you may already 
+have installed them. In this case you can directly use this tool without taking any further actions, as the code will 
+automatically run on your GPU. \
+We show here how to install a GPU for an Nvidia graphic card. We warn the user that the following steps are more 
+difficult than previously, as they may require to change some hardware settings.
 
 - First we need to install cuda-10.0, and the Nvidia driver. While these two can be installed at the same time, we
 recommend to install them separately, starting with the driver. Guidelines on how to do this can be found
@@ -78,7 +79,7 @@ recommend to install them separately, starting with the driver. Guidelines on ho
 manual installation.
 
 - Cuda-10.0 can be downloaded from [here](https://developer.nvidia.com/cuda-10.0-download-archive?target_os=Linux&target_arch=x86_64&target_distro=Ubuntu&target_version=1604&target_type=runfilelocal).
-Again we recommend to use the runfile installation. Guidelines on how to install Cuda-10.0 are explained in details in
+Again, we recommend to use the runfile installation. Guidelines on how to install Cuda-10.0 are explained in details in
 [this document](https://developer.download.nvidia.com/compute/cuda/10.0/Prod/docs/sidebar/CUDA_Quick_Start_Guide.pdf).
 You can check if the installation was successful by typing `nvidia-smi` in a command line.
 
@@ -89,9 +90,7 @@ since you already installed the graphic driver).
 You can verify if this installation was successful by running this tool and looking for the name of your GPU in the 
 printed output (in the terminal window).
 
-<br />
-
-##### 3- optional: developper installation
+##### 3- optional: developer installation
 
 If you wish to train your own model, or to have a better look at the code, you can directly download this repository 
 with:
@@ -157,10 +156,16 @@ benjamin.billot.18@ucl.ac.uk
 ### References
 
 [1] *A Learning Strategy for Contrast-agnostic MRI Segmentation* \
-Benjamin Billot, Douglas N. Greve, Koen Van Leemput, Bruce Fischl, Juan Eugenio Iglesias, Adrian V. Dalca
+Benjamin Billot, Douglas N. Greve, Koen Van Leemput, Bruce Fischl, Juan Eugenio Iglesias, Adrian V. Dalca \
+MIDL 2020 \
+[link](https://arxiv.org/abs/2003.01995)
 
 [2] *Anatomical Priors in Convolutional Networks for Unsupervised Biomedical Segmentation* \
-Adrian V. Dalca, John Guttag, Mert R. Sabuncu, 2018
+Adrian V. Dalca, John Guttag, Mert R. Sabuncu \
+CVPR 2018 \
+[link]((http://www.mit.edu/~adalca/files/papers/cvpr2018_priors.pdf))
 
 [3] *Unsupervised Data Imputation via Variational Inference of Deep Subspaces* \
-Adrian V. Dalca, John Guttag, Mert R. Sabuncu, 2019
+Adrian V. Dalca, John Guttag, Mert R. Sabuncu \
+Arxiv preprint 2019 \
+[link](https://arxiv.org/abs/1903.03503)
