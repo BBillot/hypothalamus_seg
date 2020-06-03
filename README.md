@@ -54,7 +54,7 @@ Moreover, this repository relies on several external python packages (already in
 ##### 1- installing hypothalamus_seg
 In order to download the segmentation tool (but not the code), click on one of the following links (depending on your 
 operating system):
-- Linux: [hypo_seg_linux.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EfpZzeL3Mm5LvzIdsfGYcCQBvUrroGKjiVD81BExJCmjSA?e=V2dSQu)
+- Linux: [hypo_seg_linux.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EcCa57vsvSpNsU35GbxKh8ABc_MV0nik_CaOcEbaNB0sQw?e=6ekA1V)
 - Mac: [hypo_seg_mac.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/Edm9o-EMEV1CoM45Ug5nmskB2s1KUAFAOZGAygNgfzzCxw?e=u9YVSf)
 - Windows: [hypo_seg_windows.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EaqzZMK_KjVGsNW1oSDMdAkBtPK5XQ4QUakWWC7ZjjXm7A?e=uaL8Rc)
 
