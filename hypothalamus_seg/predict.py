@@ -135,6 +135,15 @@ def predict(path_images,
 
 def prepare_output_files(path_images, out_seg, out_posteriors, out_volumes):
 
+    # convert path to absolute paths
+    path_images = os.path.abspath(path_images)
+    if out_seg is not None:
+        out_seg = os.path.abspath(out_seg)
+    if out_posteriors is not None:
+        out_posteriors = os.path.abspath(out_posteriors)
+    if out_volumes is not None:
+        out_volumes = os.path.abspath(out_volumes)
+
     # prepare input/output volumes
     if ('nii.gz' not in path_images) & ('.mgz' not in path_images) & ('.npz' not in path_images):
         images_to_segment = utils.list_images_in_folder(path_images)
@@ -159,11 +168,7 @@ def prepare_output_files(path_images, out_seg, out_posteriors, out_volumes):
                               for posteriors_path in out_posteriors]
         else:
             out_posteriors = [out_posteriors] * len(images_to_segment)
-        if out_volumes:
-            if out_volumes[-4:] != '.csv':
-                out_volumes += '.csv'
-            if not os.path.exists(os.path.dirname(out_volumes)):
-                os.mkdir(os.path.dirname(out_volumes))
+
     else:
         assert os.path.exists(path_images), "Could not find image to segment"
         images_to_segment = [path_images]
@@ -185,6 +190,13 @@ def prepare_output_files(path_images, out_seg, out_posteriors, out_volumes):
                 filename = filename.replace('.npz', '_posteriors.npz')
                 out_posteriors = os.path.join(out_posteriors, filename)
         out_posteriors = [out_posteriors]
+
+    if out_volumes:
+        if out_volumes[-4:] != '.csv':
+            print('out_volumes provided without csv extension. Adding csv extension to output_volumes.')
+            out_volumes += '.csv'
+        if not os.path.exists(os.path.dirname(out_volumes)):
+            os.mkdir(os.path.dirname(out_volumes))
 
     return images_to_segment, out_seg, out_posteriors, out_volumes
 
