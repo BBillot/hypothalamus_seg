@@ -68,13 +68,13 @@ def predict(path_images,
     # perform segmentation
     net = None
     previous_model_input_shape = None
-    for idx, (im_path, seg_path, posteriors_path) in enumerate(zip(images_to_segment,
-                                                                   path_segmentations,
-                                                                   path_posteriors)):
+    for idx, (path_image, path_segmentation, path_posterior) in enumerate(zip(images_to_segment,
+                                                                              path_segmentations,
+                                                                              path_posteriors)):
         utils.print_loop_info(idx, len(images_to_segment), 10)
 
         # preprocess image and get information
-        image, aff, h, im_res, n_channels, n_dims, shape, pad_shape, cropping, crop_idx = preprocess_image(im_path,
+        image, aff, h, im_res, n_channels, n_dims, shape, pad_shape, cropping, crop_idx = preprocess_image(path_image,
                                                                                                            n_levels,
                                                                                                            cropping,
                                                                                                            padding)
@@ -97,7 +97,7 @@ def predict(path_images,
 
         # get posteriors and segmentation
         seg, posteriors = postprocess(prediction_patch, cropping, pad_shape, shape, crop_idx, n_dims, label_list,
-                                      keep_biggest_component, aff)
+                                      keep_biggest_component, aff, path_posterior)
 
         # compute volumes
         if path_volumes is not None:
@@ -106,7 +106,7 @@ def predict(path_images,
             else:
                 volumes = np.sum(posteriors, axis=tuple(range(0, len(posteriors.shape) - 1)))
             volumes = np.around(volumes * np.prod(im_res), 3)
-            row = [os.path.basename(im_path).replace('.nii.gz', '')] + [str(vol) for vol in volumes]
+            row = [os.path.basename(path_image).replace('.nii.gz', '')] + [str(vol) for vol in volumes]
             row += [np.sum(volumes[:int(len(volumes) / 2)]), np.sum(volumes[int(len(volumes) / 2):])]
             with open(path_volumes, 'a') as csvFile:
                 writer = csv.writer(csvFile)
@@ -114,15 +114,15 @@ def predict(path_images,
             csvFile.close()
 
         # write results to disk
-        if seg_path is not None:
-            utils.save_volume(seg.astype('int'), aff, h, seg_path)
-        if posteriors_path is not None:
+        if path_segmentation is not None:
+            utils.save_volume(seg.astype('int'), aff, h, path_segmentation)
+        if path_posterior is not None:
             if n_channels > 1:
                 new_shape = list(posteriors.shape)
                 new_shape.insert(-1, 1)
                 new_shape = tuple(new_shape)
                 posteriors = np.reshape(posteriors, new_shape)
-            utils.save_volume(posteriors.astype('float'), aff, h, posteriors_path)
+            utils.save_volume(posteriors.astype('float'), aff, h, path_posterior)
 
     # evaluate
     if gt_folder is not None:
@@ -331,7 +331,8 @@ def build_model(model_file, input_shape, resample, im_res, n_levels, n_lab, conv
     return net
 
 
-def postprocess(prediction, crop_shape, pad_shape, im_shape, crop, n_dims, labels, keep_biggest_component, aff):
+def postprocess(prediction, crop_shape, pad_shape, im_shape, crop, n_dims, labels, keep_biggest_component, aff,
+                path_posteriors):
 
     # get posteriors and segmentation
     post_patch = np.squeeze(prediction)
@@ -376,6 +377,11 @@ def postprocess(prediction, crop_shape, pad_shape, im_shape, crop, n_dims, label
     if n_dims > 2:
         aff_ref = np.array([[0., 0., 1., 0.], [-1., 0., 0., 0.], [0., 1., 0., 0.], [0., 0., 0., 1.]])
         seg_patch = edit_volumes.align_volume_to_ref(seg_patch, aff_ref, aff_ref=aff, return_aff=False)
+        if path_posteriors is not None:
+            post_patch = edit_volumes.align_volume_to_ref(post_patch, aff_ref, aff_ref=aff, return_aff=False,
+                                                          n_dims=n_dims)
+        else:
+            post_patch = None
 
     # paste patches back to matrix of original image size
     if crop_shape is not None:
@@ -384,10 +390,12 @@ def postprocess(prediction, crop_shape, pad_shape, im_shape, crop, n_dims, label
         posteriors[..., 0] = np.ones(pad_shape)  # place background around patch
         if n_dims == 2:
             seg[crop[0]:crop[2], crop[1]:crop[3]] = seg_patch
-            posteriors[crop[0]:crop[2], crop[1]:crop[3], :] = post_patch
+            if post_patch is not None:
+                posteriors[crop[0]:crop[2], crop[1]:crop[3], :] = post_patch
         elif n_dims == 3:
             seg[crop[0]:crop[3], crop[1]:crop[4], crop[2]:crop[5]] = seg_patch
-            posteriors[crop[0]:crop[3], crop[1]:crop[4], crop[2]:crop[5], :] = post_patch
+            if post_patch is not None:
+                posteriors[crop[0]:crop[3], crop[1]:crop[4], crop[2]:crop[5], :] = post_patch
     else:
         seg = seg_patch
         posteriors = post_patch

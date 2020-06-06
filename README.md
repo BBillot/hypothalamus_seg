@@ -54,7 +54,7 @@ Moreover, this repository relies on several external python packages (already in
 ##### 1- installing hypothalamus_seg
 In order to download the segmentation tool (but not the code), click on one of the following links (depending on your 
 operating system):
-- Linux: [hypo_seg_linux.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EWKGAzl-WqVGhWYMefe9_0oBXRTos0c6YaguiI4Q9PmUaQ?e=mNbZUJ)
+- Linux: [hypo_seg_linux.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EV8Og4ZgqMJAv0B-4y27SHYBtvHtNRrVXKJgrNs1RreYXQ?e=MDShSI)
 - Mac: [hypo_seg_mac.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/Edm9o-EMEV1CoM45Ug5nmskB2s1KUAFAOZGAygNgfzzCxw?e=u9YVSf)
 - Windows: [hypo_seg_windows.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EaqzZMK_KjVGsNW1oSDMdAkBtPK5XQ4QUakWWC7ZjjXm7A?e=uaL8Rc)
 
@@ -143,6 +143,11 @@ You can have access to these explanations directly by typing once in `<path to h
 ./hypo_seg -h        # In Linux or in Mac
 ./hypo_seg.exe -h    # In Windows
 ```
+
+**Important**: If you wish to run this tool on several images, we recommend that you put them in a single folder and
+run hypothalamus_seg on this folder, rather than calling it individually on each image. That way you can save time by
+avoiding to setup all the required libraries for each image, which typically takes 60% of the runtime for the CPU 
+version, and more than 90% for the GPU version.
 
 ----------------
 
