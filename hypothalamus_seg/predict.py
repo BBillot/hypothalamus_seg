@@ -97,7 +97,7 @@ def predict(path_images,
 
         # get posteriors and segmentation
         seg, posteriors = postprocess(prediction_patch, cropping, pad_shape, shape, crop_idx, n_dims, label_list,
-                                      keep_biggest_component, aff, path_posterior)
+                                      keep_biggest_component, aff)
 
         # compute volumes
         if path_volumes is not None:
@@ -331,8 +331,7 @@ def build_model(model_file, input_shape, resample, im_res, n_levels, n_lab, conv
     return net
 
 
-def postprocess(prediction, crop_shape, pad_shape, im_shape, crop, n_dims, labels, keep_biggest_component, aff,
-                path_posteriors):
+def postprocess(prediction, crop_shape, pad_shape, im_shape, crop, n_dims, labels, keep_biggest_component, aff):
 
     # get posteriors and segmentation
     post_patch = np.squeeze(prediction)
@@ -377,11 +376,7 @@ def postprocess(prediction, crop_shape, pad_shape, im_shape, crop, n_dims, label
     if n_dims > 2:
         aff_ref = np.array([[0., 0., 1., 0.], [-1., 0., 0., 0.], [0., 1., 0., 0.], [0., 0., 0., 1.]])
         seg_patch = edit_volumes.align_volume_to_ref(seg_patch, aff_ref, aff_ref=aff, return_aff=False)
-        if path_posteriors is not None:
-            post_patch = edit_volumes.align_volume_to_ref(post_patch, aff_ref, aff_ref=aff, return_aff=False,
-                                                          n_dims=n_dims)
-        else:
-            post_patch = None
+        post_patch = edit_volumes.align_volume_to_ref(post_patch, aff_ref, aff_ref=aff, return_aff=False, n_dims=n_dims)
 
     # paste patches back to matrix of original image size
     if crop_shape is not None:
@@ -390,12 +385,10 @@ def postprocess(prediction, crop_shape, pad_shape, im_shape, crop, n_dims, label
         posteriors[..., 0] = np.ones(pad_shape)  # place background around patch
         if n_dims == 2:
             seg[crop[0]:crop[2], crop[1]:crop[3]] = seg_patch
-            if post_patch is not None:
-                posteriors[crop[0]:crop[2], crop[1]:crop[3], :] = post_patch
+            posteriors[crop[0]:crop[2], crop[1]:crop[3], :] = post_patch
         elif n_dims == 3:
             seg[crop[0]:crop[3], crop[1]:crop[4], crop[2]:crop[5]] = seg_patch
-            if post_patch is not None:
-                posteriors[crop[0]:crop[3], crop[1]:crop[4], crop[2]:crop[5], :] = post_patch
+            posteriors[crop[0]:crop[3], crop[1]:crop[4], crop[2]:crop[5], :] = post_patch
     else:
         seg = seg_patch
         posteriors = post_patch
