@@ -356,7 +356,7 @@ def align_volume_to_ref(volume, aff, aff_ref=None, return_aff=False, n_dims=None
 
     # extract ras axes
     if n_dims is None:
-        n_dims, _ = get_dims(volume.shape)
+        n_dims, _ = utils.get_dims(volume.shape)
     ras_axes_ref = get_ras_axes(aff_ref, n_dims=n_dims)
     ras_axes_flo = get_ras_axes(aff_flo, n_dims=n_dims)
 

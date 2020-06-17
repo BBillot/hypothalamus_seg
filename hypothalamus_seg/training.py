@@ -1,10 +1,9 @@
 # python imports
 import os
 import numpy as np
+import keras.callbacks as KC
 from keras.models import Model
 from keras.optimizers import Adam
-from keras.callbacks import TensorBoard
-from keras.callbacks import ModelCheckpoint
 
 # project imports
 from . import metrics_model
@@ -140,11 +139,15 @@ def training(image_dir,
 
     # prepare data files
     if ('.nii.gz' in image_dir) | ('.nii' in image_dir) | ('.mgz' in image_dir) | ('.npz' in image_dir):
-        image_dir = [image_dir]
+        assert os.path.isfile(image_dir), 'no such file: %s' % image_dir
+        path_images = [image_dir]
+    else:
+        path_images = utils.list_images_in_folder(image_dir)
     if ('.nii.gz' in labels_dir) | ('.nii' in labels_dir) | ('.mgz' in labels_dir) | ('.npz' in labels_dir):
-        labels_dir = [labels_dir]
-    path_images = utils.list_images_in_folder(image_dir)
-    path_label_maps = utils.list_images_in_folder(labels_dir)
+        assert os.path.isfile(labels_dir), 'no such file: %s' % labels_dir
+        path_label_maps = [labels_dir]
+    else:
+        path_label_maps = utils.list_images_in_folder(labels_dir)
     assert len(path_images) == len(path_label_maps), 'not the same number of training images and label maps.'
 
     # read info from image and get label list
@@ -241,7 +244,7 @@ def training(image_dir,
 
 def train_model(model,
                 generator,
-                lr,
+                learn_rate,
                 lr_decay,
                 n_epochs,
                 n_steps,
@@ -250,25 +253,30 @@ def train_model(model,
                 metric_type,
                 initial_epoch=0):
 
-    # prepare callbacks
+    # model saving callback
     save_file_name = os.path.join(model_dir, '%s_{epoch:03d}.h5' % metric_type)
-    temp_callbacks = ModelCheckpoint(save_file_name, verbose=1)
-    mg_model = model
+    callbacks = [KC.ModelCheckpoint(save_file_name, save_weights_only=True, verbose=1)]
 
     # TensorBoard callback
     if metric_type == 'dice':
-        tensorboard = TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=True, write_images=False)
-        callbacks = [temp_callbacks, tensorboard]
-    else:
-        callbacks = [temp_callbacks]
+        callbacks.append(KC.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=True, write_images=False))
 
-    # metric and loss
-    metric = metrics_model.IdentityLoss()
-    data_loss = metric.loss
+    # decrease learning rate by 1 magnitude after 350 epochs
+    def scheduler(epoch, lr):
+        if epoch == 350 - 1:
+            return lr / 10
+        else:
+            return lr
+    callbacks.append(KC.LearningRateScheduler(scheduler))
 
     # compile
-    mg_model.compile(optimizer=Adam(lr=lr, decay=lr_decay), loss=data_loss, loss_weights=[1.0])
+    model.compile(optimizer=Adam(lr=learn_rate, decay=lr_decay),
+                  loss=metrics_model.IdentityLoss().loss,
+                  loss_weights=[1.0])
 
     # fit
-    mg_model.fit_generator(generator, epochs=n_epochs, steps_per_epoch=n_steps, callbacks=callbacks,
-                           initial_epoch=initial_epoch)
+    model.fit_generator(generator,
+                        epochs=n_epochs,
+                        steps_per_epoch=n_steps,
+                        callbacks=callbacks,
+                        initial_epoch=initial_epoch)

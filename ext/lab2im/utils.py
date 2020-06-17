@@ -204,7 +204,7 @@ def get_list_labels(label_list=None, labels_dir=None, save_label_list=None, FS_s
             else:
                 raise Exception('label {} not in our current FS classification, '
                                 'please update get_list_labels in utils.py'.format(la))
-        label_list = np.concatenate([neutral, left, right])
+        label_list = np.concatenate([sorted(neutral), sorted(left), sorted(right)])
         if ((len(left) > 0) & (len(right) > 0)) | ((len(left) == 0) & (len(right) == 0)):
             n_neutral_labels = len(neutral)
         else:
@@ -607,9 +607,11 @@ def build_gaussian_kernel(sigma, n_dims):
 
 def get_std_blurring_mask_for_downsampling(dowsample_res, current_res, thickness=None):
     """Compute standard deviations of 1d gaussian masks for image blurring before downsampling.
-    :param dowsample_res: resolution to dowsample to.
+    :param dowsample_res: resolution to dowsample to. Can be a 1d numpy array or list.
     :param current_res: resolution of the volume before downsampling.
+    Can be a 1d numpy array or list of the same length as downsample res.
     :param thickness: slices thickness in each dimension.
+    Can be a 1d numpy array or list of the same length as downsample res.
     :return: standard deviation of the blurring masks
     """
     # reformat data resolution at which we blur
