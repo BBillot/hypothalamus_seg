@@ -14,6 +14,7 @@ hypothalamus_seg/check_model.py
 hypothalamus_seg/label_fusion.py
 hypothalamus_seg/training_gpuid.py
 
+scripts/check_augm_model.py
 scripts/combine_results.py
 scripts/edit_subunit_labels.py
 scripts/mas_post_analysis.py

@@ -98,12 +98,12 @@ def build_augmentation_model(im_shape,
         # concatenate image and labels
         image = KL.concatenate([image_in, split_labels], axis=len(im_shape), name='inputs_cat')
 
-    # deform labels
+    # spatial deformation
     if apply_linear_trans | apply_nonlin_trans:
-        image = l2i_sp.deform_tensor(labels, aff_in, apply_nonlin_trans, 'nearest', nonlin_std, nonlin_shape_factor)
+        image = l2i_sp.deform_tensor(image, aff_in, apply_nonlin_trans, 'nearest', nonlin_std, nonlin_shape_factor)
 
     # cropping
-    if cropping_shape is not None:
+    if cropping_shape != im_shape[:-1]:
         image, _ = l2i_sp.random_cropping(image, cropping_shape, n_dims)
 
     # resample image to new resolution if necessary
@@ -141,15 +141,18 @@ def build_augmentation_model(im_shape,
 
 def get_shapes(image_shape, output_shape, atlas_res, target_res, output_div_by_n):
 
+    # reformat resolutions to lists
+    atlas_res = utils.reformat_to_list(atlas_res)
     n_dims = len(atlas_res)
+    target_res = utils.reformat_to_list(target_res)
 
     # get resampling factor
-    if atlas_res.tolist() != target_res.tolist():
+    if atlas_res != target_res:
         resample_factor = [atlas_res[i] / float(target_res[i]) for i in range(n_dims)]
     else:
         resample_factor = None
 
-    # output shape specified, need to get cropping shape, and resample shape if necessary
+    # output shape specified, need to get cropping shape if necessary
     if output_shape is not None:
         output_shape = utils.reformat_to_list(output_shape, length=n_dims, dtype='int')
 
@@ -176,14 +179,28 @@ def get_shapes(image_shape, output_shape, atlas_res, target_res, output_div_by_n
 
     # no output shape specified, so no cropping unless label_shape is not divisible by output_div_by_n
     else:
-        cropping_shape = image_shape
-        if resample_factor is not None:
-            output_shape = [int(np.around(cropping_shape[i]*resample_factor[i], 0)) for i in range(n_dims)]
-        else:
-            output_shape = cropping_shape
+
         # make sure output shape is divisible by output_div_by_n
         if output_div_by_n is not None:
-            output_shape = [utils.find_closest_number_divisible_by_m(s, output_div_by_n, smaller_ans=False)
-                            for s in output_shape]
+
+            # if resampling, get the potential output_shape and check if it is divisible by n
+            if resample_factor is not None:
+                output_shape = [int(image_shape[i] * resample_factor[i]) for i in range(n_dims)]
+                output_shape = [utils.find_closest_number_divisible_by_m(s, output_div_by_n, smaller_ans=True)
+                                for s in output_shape]
+                cropping_shape = [int(np.around(output_shape[i] / resample_factor[i], 0)) for i in range(n_dims)]
+            # if no resampling, simply check if image_shape is divisible by n
+            else:
+                cropping_shape = [utils.find_closest_number_divisible_by_m(s, output_div_by_n, smaller_ans=True)
+                                  for s in image_shape]
+                output_shape = cropping_shape
+
+        # if no need to be divisible by n, simply take cropping_shape as image_shape, and build output_shape
+        else:
+            cropping_shape = image_shape
+            if resample_factor is not None:
+                output_shape = [int(cropping_shape[i] * resample_factor[i]) for i in range(n_dims)]
+            else:
+                output_shape = cropping_shape
 
     return cropping_shape, output_shape
