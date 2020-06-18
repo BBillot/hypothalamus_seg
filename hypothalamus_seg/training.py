@@ -43,6 +43,7 @@ def training(image_dir,
              feat_multiplier=1,
              dropout=0,
              no_batch_norm=False,
+             activation='elu',
              lr=1e-4,
              lr_decay=0,
              wl2_epochs=5,
@@ -117,6 +118,7 @@ def training(image_dir,
     :param feat_multiplier: (optional) multiply the number of feature by this nummber at each new level. Default is 1.
     :param dropout: (optional) probability of drpout for the Unet. Deafult is 0, where no dropout is applied.
     :param no_batch_norm: (optional) wheter to remove batch normalisation. Default is False, where BN is applied.
+    :param activation: (optional) activation function. Can be 'elu', 'relu'.
 
     # ----------------------------------------------- Training parameters ----------------------------------------------
     :param lr: (optional) learning rate for the training. Default is 1e-4
@@ -151,7 +153,7 @@ def training(image_dir,
     assert len(path_images) == len(path_label_maps), 'not the same number of training images and label maps.'
 
     # read info from image and get label list
-    im_shape, aff, _, n_channels, _, image_res = utils.get_volume_info(path_images[0])
+    im_shape, aff, _, n_channels, _, image_res = utils.get_volume_info(path_images[0], aff_ref=np.eye(4))
     label_list = utils.get_list_labels(path_label_list, labels_dir=labels_dir, save_label_list=save_label_list)
     n_labels = np.size(label_list)
 
@@ -199,6 +201,7 @@ def training(image_dir,
                                  nb_conv_per_level=nb_conv_per_level,
                                  conv_dropout=dropout,
                                  batch_norm=batch_norm_dim,
+                                 activation=activation,
                                  input_model=augmentation_model)
 
     # input generator

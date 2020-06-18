@@ -32,8 +32,8 @@ def image_seg_generator(path_images,
         for idx in indices:
 
             # add images and labels to inputs
-            image = utils.load_volume(path_images[idx])
-            label_map = utils.load_volume(path_labels[idx], dtype='int')
+            image, aff, h = utils.load_volume(path_images[idx], im_only=False, aff_ref=np.eye(4))
+            label_map = utils.load_volume(path_labels[idx], dtype='int', aff_ref=np.eye(4))
             if n_channels > 1:
                 list_images.append(utils.add_axis(image))
             else:

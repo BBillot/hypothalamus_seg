@@ -41,7 +41,7 @@ parser.add_argument("--no_intensity_augmentation", action='store_false', dest="a
                     help="deactivate intensity augmentation")
 
 # Architecture parameters
-parser.add_argument("--n_levels", type=int, dest="n_levels", default=3, help="number of levels for the UNet")
+parser.add_argument("--n_levels", type=int, dest="n_levels", default=5, help="number of levels for the UNet")
 parser.add_argument("--conv_per_level", type=int, dest="nb_conv_per_level", default=2, help="conv layers par level")
 parser.add_argument("--conv_size", type=int, dest="conv_size", default=3, help="size of unet's convolution masks")
 parser.add_argument("--unet_features", type=int, dest="unet_feat_count", default=24, help="features of the first layer")
@@ -49,6 +49,7 @@ parser.add_argument("--feat_mult", type=int, dest="feat_multiplier", default=1,
                     help="number by which to multiply the number of features at each level")
 parser.add_argument("--dropout", type=float, dest="dropout", default=0, help="dropout probability")
 parser.add_argument("--no_batch_norm", action='store_true', dest="no_batch_norm", help="deactivate batch normalisation")
+parser.add_argument("--activation", type=str, dest="activation", default='elu', help="activation function")
 
 # training parameters
 parser.add_argument("--lr", type=float, dest="lr", default=1e-4, help="learning rate")

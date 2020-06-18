@@ -37,6 +37,7 @@ def predict(path_images,
             unet_feat_count=24,
             feat_multiplier=1,
             no_batch_norm=False,
+            activation='elu',
             gt_folder=None):
 
     assert path_model, "A model file is necessary"
@@ -90,7 +91,8 @@ def predict(path_images,
 
             # build network
             net = build_model(path_model, model_input_shape, resample, im_res, n_levels, len(label_list), conv_size,
-                              nb_conv_per_level, unet_feat_count, feat_multiplier, no_batch_norm, sigma_smoothing)
+                              nb_conv_per_level, unet_feat_count, feat_multiplier, no_batch_norm, activation,
+                              sigma_smoothing)
 
         # predict posteriors
         prediction_patch = net.predict(image)
@@ -259,7 +261,7 @@ def preprocess_image(im_path, n_levels, crop_shape=None, padding=None):
 
 
 def build_model(model_file, input_shape, resample, im_res, n_levels, n_lab, conv_size, nb_conv_per_level,
-                unet_feat_count, feat_multiplier, no_batch_norm, sigma_smoothing):
+                unet_feat_count, feat_multiplier, no_batch_norm, activation, sigma_smoothing):
 
     # initialisation
     net = None
@@ -293,7 +295,7 @@ def build_model(model_file, input_shape, resample, im_res, n_levels, n_lab, conv
                           use_logp=True,
                           padding='same',
                           dilation_rate_mult=1,
-                          activation='elu',
+                          activation=activation,
                           use_residuals=False,
                           final_pred_activation='softmax',
                           nb_conv_per_level=nb_conv_per_level,
