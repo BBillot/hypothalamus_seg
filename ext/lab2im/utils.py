@@ -32,6 +32,7 @@
     -get_std_blurring_mask_for_downsampling
     -draw_value_from_distribution
     -create_affine_transformation_matrix
+    -build_exp
 """
 
 import os
@@ -235,12 +236,12 @@ def get_list_labels(label_list=None, labels_dir=None, save_label_list=None, FS_s
 
     # save labels if specified
     if save_label_list is not None:
-        np.save(save_label_list, label_list)
+        np.save(save_label_list, np.int32(label_list))
 
     if FS_sort:
-        return label_list, n_neutral_labels
+        return np.int32(label_list), n_neutral_labels
     else:
-        return label_list
+        return np.int32(label_list)
 
 
 def load_array_if_path(var, load_as_numpy=True):
@@ -538,7 +539,7 @@ def get_padding_margin(cropping, loss_cropping):
 # --------------------------------------------------- miscellaneous ----------------------------------------------------
 
 
-def print_loop_info(idx, n_iterations, spacing=None):
+def print_loop_info(idx, n_iterations, spacing):
     """Print loop iteration number.
     :param idx: iteration number
     :param n_iterations: total number iterations.
@@ -767,3 +768,11 @@ def create_affine_transformation_matrix(n_dims, scaling=None, rotation=None, she
         T_rot3[np.array([0, 1, 0, 1]), np.array([0, 0, 1, 1])] = [np.cos(rotation[2]), np.sin(rotation[2]),
                                                                   np.sin(rotation[2]) * -1, np.cos(rotation[2])]
         return T_translation @ T_rot3 @ T_rot2 @ T_rot1 @ T_shearing @ T_scaling
+
+
+def build_exp(x, first, last, fix_point):
+    # first = f(0), last = f(+inf), fix_point = [x0, f(x0))]
+    a = last
+    b = first - last
+    c = - (1 / fix_point[0]) * np.log((fix_point[1] - last) / (first - last))
+    return a + b * np.exp(-c * x)

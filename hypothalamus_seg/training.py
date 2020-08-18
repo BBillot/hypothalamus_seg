@@ -220,7 +220,7 @@ def training(image_dir,
         wl2_model = Model(unet_model.inputs, [unet_model.get_layer('unet_likelihood').output])
         wl2_model = metrics_model.metrics_model(input_shape=unet_input_shape[:-1] + [n_labels],
                                                 input_model=wl2_model,
-                                                metrics='weighted_l2',
+                                                metrics='wl2',
                                                 weight_background=background_weight,
                                                 name='metrics_model')
         if load_model_file is not None:
@@ -263,14 +263,6 @@ def train_model(model,
     # TensorBoard callback
     if metric_type == 'dice':
         callbacks.append(KC.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=True, write_images=False))
-
-    # decrease learning rate by 1 magnitude after 350 epochs
-    def scheduler(epoch, lr):
-        if epoch == 350 - 1:
-            return lr / 10
-        else:
-            return lr
-    callbacks.append(KC.LearningRateScheduler(scheduler))
 
     # compile
     model.compile(optimizer=Adam(lr=learn_rate, decay=lr_decay),

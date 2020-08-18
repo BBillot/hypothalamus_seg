@@ -52,19 +52,31 @@ def surface_distances(x, y):
     y_dists_to_x = x_dist[y_edge == 1]
 
     # find max distance from the 2 surfaces
-    x_max_dist_to_y = np.max(x_dists_to_y)
-    y_max_dist_to_x = np.max(y_dists_to_x)
+    if x_dists_to_y.shape[0] > 0:
+        x_max_dist_to_y = np.max(x_dists_to_y)
+    else:
+        x_max_dist_to_y = max(x.shape)
+    if y_dists_to_x.shape[0] > 0:
+        y_max_dist_to_x = np.max(y_dists_to_x)
+    else:
+        y_max_dist_to_x = max(x.shape)
 
     # find average distance between 2 surfaces
-    x_mean_dist_to_y = np.mean(x_dists_to_y)
-    y_mean_dist_to_x = np.mean(y_dists_to_x)
+    if x_dists_to_y.shape[0] > 0:
+        x_mean_dist_to_y = np.mean(x_dists_to_y)
+    else:
+        x_mean_dist_to_y = max(x.shape)
+    if y_dists_to_x.shape[0] > 0:
+        y_mean_dist_to_x = np.mean(y_dists_to_x)
+    else:
+        y_mean_dist_to_x = max(x.shape)
 
     return np.maximum(x_max_dist_to_y, y_max_dist_to_x), (x_mean_dist_to_y + y_mean_dist_to_x) / 2
 
 
-def compute_non_parametric_paired_test(dice_ref, dice_compare, eval_indices, alternative='two-sided'):
-    """Compute non-parametric paired t-tests between two sets of Dice scores.
-    :param dice_ref: numpy array with Dice scores, rows represent structures, and columns represent subjects.
+def compute_non_parametric_paired_test(dice_ref, dice_compare, eval_indices=None, alternative='two-sided'):
+    """Compute non-parametric paired t-tests between two sets of scores.
+    :param dice_ref: numpy array with scores, rows represent structures, and columns represent subjects.
     Taken as reference for one-sided tests.
     :param dice_compare: numpy array of the same format as dice_ref.
     :param eval_indices: (optional) list or 1d array indicating the row indices of structures to run the tests for
@@ -72,6 +84,10 @@ def compute_non_parametric_paired_test(dice_ref, dice_compare, eval_indices, alt
     :return: 1d numpy array, with p-values for all tests on evaluated structures, as well as an additionnal test for
     average scores (last value of the array). The average score is computed only on the evaluation structures.
     """
+
+    # take all rows if indices not specified
+    if eval_indices is None:
+        eval_indices = np.arange(dice_ref.shape[0])
 
     # loop over all evaluation label values
     pvalues = list()

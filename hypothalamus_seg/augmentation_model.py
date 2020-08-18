@@ -100,7 +100,7 @@ def build_augmentation_model(im_shape,
 
     # spatial deformation
     if apply_linear_trans | apply_nonlin_trans:
-        image = l2i_sp.deform_tensor(image, aff_in, apply_nonlin_trans, 'nearest', nonlin_std, nonlin_shape_factor)
+        image = l2i_sp.deform_tensor(image, aff_in, nonlin_std=nonlin_std, nonlin_shape_factor=nonlin_shape_factor)
 
     # cropping
     if cropping_shape != im_shape[:-1]:
