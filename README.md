@@ -1,5 +1,11 @@
 # hypothalamus_seg
 
+This page hosts the code related to the following publication: \
+\
+**Automated segmentation of the Hypothalamus and associated subunits in brain MRI** \
+B. Billot, M. Bocchetta, E. Todd, A. V. Dalca, J. D. Rohrer, J. E. Iglesias\
+NeuroImage, accepted for publication
+
 This repository enables automated segmentation of the hypothalamus and its associated subunits in T1-weighted scans of 
 approximatively 1mm isotropic resolution. \
 The presented tool is based on a convolutional neural network, which allows to retrieve segmentations in a very short 
@@ -54,9 +60,9 @@ Moreover, this repository relies on several external python packages (already in
 ##### 1- installing hypothalamus_seg
 In order to download the segmentation tool (but not the code), click on one of the following links (depending on your 
 operating system):
-- Linux: [hypo_seg_linux.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EXhFmgIrdWVJoF8OvKx05UABNevpcwCKGdcS4HALONO0NA?e=On5PQv)
-- Mac: [hypo_seg_mac.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/Ef1ZX--wmQhPswerIyJQMWgBDODPue5pkyXrLjlErI7nXg?e=X4Bdlt)
-- Windows: [hypo_seg_windows.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EbyC0LN6b1hEhX5Nu6k7cmcB4HCm5Lk_1QpkcXFMBGDPpQ?e=1Y6WWs)
+- Linux: [hypo_seg_linux.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EX1pvPRWVMhAvqAzbafYkwUBQBTZX9K6FwNhIP4tz2z7PQ?e=0AYRNd)
+- Mac: [hypo_seg_mac.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EQF-4qkZwS9HsXN6GpiGhNQB1ohiyYf5HxSjF_mu9p6pQQ?e=WVr5yV)
+- Windows: [hypo_seg_windows.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EbhOSi2R-YVApZdnKWybz-oBGPgLwGW4vafLGI7YmSk4Hw?e=fJhYS0)
 
 This will take you to a OneDrive page where you can download a zip file by directly clicking on `Download` (top left). \
 Once the file is downloaded, move it to the desired location on your computer, and unzip it. 

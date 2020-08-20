@@ -32,10 +32,10 @@ def predict(path_images,
             sigma_smoothing=0,
             keep_biggest_component=False,
             conv_size=3,
-            n_levels=5,
+            n_levels=3,
             nb_conv_per_level=2,
             unet_feat_count=24,
-            feat_multiplier=1,
+            feat_multiplier=2,
             no_batch_norm=False,
             activation='elu',
             gt_folder=None):
@@ -373,7 +373,7 @@ def postprocess(prediction, crop_shape, pad_shape, im_shape, crop, n_dims, label
 
         seg_patch = seg_left | seg_right
 
-    # align prediction back to first orientation, change this to the affine matrix of your training data
+    # align prediction back to first orientation
     if n_dims > 2:
         seg_patch = edit_volumes.align_volume_to_ref(seg_patch, np.eye(4), aff_ref=aff)
         post_patch = edit_volumes.align_volume_to_ref(post_patch, np.eye(4), aff_ref=aff, n_dims=n_dims)
