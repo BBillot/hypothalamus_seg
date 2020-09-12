@@ -118,7 +118,7 @@ def build_augmentation_model(im_shape,
             blurred_channels.append(l2i_et.blur_tensor(split[i], kernels_list, n_dims=n_dims))
         image = KL.concatenate(blurred_channels + [split[-1]])
         # resample image at target resolution
-        image = l2i_et.resample_tensor(image, output_shape, n_dims=n_dims)
+        image = l2i_et.resample_tensor(image, output_shape)
 
     # split tensor between image and labels
     image, labels = KL.Lambda(lambda x: tf.split(x, [n_channels, -1], axis=len(im_shape)), name='splitting')(image)

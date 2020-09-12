@@ -153,7 +153,7 @@ def training(image_dir,
     assert len(path_images) == len(path_label_maps), 'not the same number of training images and label maps.'
 
     # read info from image and get label list
-    im_shape, aff, _, n_channels, _, image_res = utils.get_volume_info(path_images[0], aff_ref=np.eye(4))
+    im_shape, _, _, n_channels, _, image_res = utils.get_volume_info(path_images[0], aff_ref=np.eye(4))
     label_list = utils.get_list_labels(path_label_list, labels_dir=labels_dir, save_label_list=save_label_list)
     n_labels = np.size(label_list)
 
@@ -176,7 +176,7 @@ def training(image_dir,
                                                   output_div_by_n=2**n_levels,
                                                   flipping=flipping,
                                                   apply_flip_rl_only=flip_rl_only,
-                                                  aff=aff,
+                                                  aff=np.eye(4),
                                                   apply_linear_trans=apply_linear_trans,
                                                   apply_nonlin_trans=apply_nonlin_trans,
                                                   nonlin_std=nonlin_std,

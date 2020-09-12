@@ -214,7 +214,9 @@ def prepare_output_files(path_images, out_seg, out_posteriors, out_volumes):
 def preprocess_image(im_path, n_levels, crop_shape=None, padding=None):
 
     # read image and corresponding info
-    im, shape, aff, n_dims, n_channels, header, im_res = utils.get_volume_info(im_path, return_volume=True)
+    im, shape, aff, n_dims, n_channels, header, im_res = utils.get_volume_info(im_path,
+                                                                               aff_ref=np.eye(4),
+                                                                               return_volume=True)
 
     if padding:
         if n_channels == 1:
@@ -245,10 +247,6 @@ def preprocess_image(im_path, n_levels, crop_shape=None, padding=None):
         im = edit_volumes.crop_volume_with_idx(im, crop_idx=crop_idx)
     else:
         crop_idx = None
-
-    # align image to training axes and directions, change this to the affine matrix of your training data
-    if n_dims > 2:
-        im = edit_volumes.align_volume_to_ref(im, aff, aff_ref=np.eye(4), return_aff=False)
 
     # normalise image
     m = np.min(im)
@@ -381,11 +379,6 @@ def postprocess(prediction, crop_shape, pad_shape, im_shape, crop, n_dims, label
 
         seg_patch = seg_left | seg_right
 
-    # align prediction back to first orientation
-    if n_dims > 2:
-        seg_patch = edit_volumes.align_volume_to_ref(seg_patch, np.eye(4), aff_ref=aff)
-        post_patch = edit_volumes.align_volume_to_ref(post_patch, np.eye(4), aff_ref=aff, n_dims=n_dims)
-
     # paste patches back to matrix of original image size
     if crop_shape is not None:
         seg = np.zeros(shape=pad_shape, dtype='int32')
@@ -409,5 +402,10 @@ def postprocess(prediction, crop_shape, pad_shape, im_shape, crop, n_dims, label
             seg = seg[lower_bound[0]:upper_bound[0], lower_bound[1]:upper_bound[1]]
         elif n_dims == 3:
             seg = seg[lower_bound[0]:upper_bound[0], lower_bound[1]:upper_bound[1], lower_bound[2]:upper_bound[2]]
+
+    # align prediction back to first orientation
+    if n_dims > 2:
+        seg = edit_volumes.align_volume_to_ref(seg, np.eye(4), aff_ref=aff)
+        posteriors = edit_volumes.align_volume_to_ref(posteriors, np.eye(4), aff_ref=aff, n_dims=n_dims)
 
     return seg, posteriors
