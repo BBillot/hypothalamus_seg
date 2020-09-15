@@ -32,7 +32,8 @@ def bias_field_augmentation(tensor, bias_field_std=.3, bias_shape_factor=.025):
     small_shape = utils.get_resample_shape(volume_shape, bias_shape_factor, 1)
     tensor_shape = KL.Lambda(lambda x: tf.shape(x))(tensor)
     split_shape = KL.Lambda(lambda x: tf.split(x, [1, n_dims + 1]))(tensor_shape)
-    bias_shape = KL.Lambda(lambda x: tf.concat([x, tf.convert_to_tensor(small_shape)], axis=0))(split_shape[0])
+    bias_shape = KL.Lambda(lambda x: tf.concat([tf.cast(x, dtype='int32'), tf.convert_to_tensor(small_shape,
+                           dtype='int32')], axis=0))(split_shape[0])
     bias_std = KL.Lambda(lambda x: tf.random.uniform((1, 1), maxval=bias_field_std))([])
     bias_field = KL.Lambda(lambda x: tf.random.normal(x[0], stddev=x[1]))([bias_shape, bias_std])
     bias_field._keras_shape = tuple(bias_field.get_shape().as_list())
