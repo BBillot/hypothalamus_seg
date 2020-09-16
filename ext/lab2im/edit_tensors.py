@@ -217,13 +217,17 @@ def pad_tensor(tensor, padding_shape=None, pad_value=0):
 
     # get shapes and padding margins
     tensor_shape = KL.Lambda(lambda x: tf.shape(x))(tensor)
-    padding_shape = KL.Lambda(lambda x: tf.math.maximum(x, tf.convert_to_tensor(padding_shape, tf.int32)))(tensor_shape)
+    padding_shape = KL.Lambda(lambda x: tf.math.maximum(tf.cast(x, dtype='int32'),
+                              tf.convert_to_tensor(padding_shape, dtype='int32')))(tensor_shape)
 
     # build padding margins
-    min_margins = KL.Lambda(lambda x: tf.cast((x[0] - x[1]) / 2, tf.int32))([padding_shape, tensor_shape])
-    max_margins = KL.Lambda(lambda x: (x[0] - x[1]) - x[2])([padding_shape, tensor_shape, min_margins])
-    margins = KL.Lambda(lambda x: tf.stack([x[0], tf.cast(x[1], tf.int32)], axis=-1))([min_margins, max_margins])
+    min_margins = KL.Lambda(lambda x: tf.cast((x[0] - x[1]) / 2, dtype='int32'))([padding_shape, tensor_shape])
+    max_margins = KL.Lambda(lambda x: tf.cast((x[0] - x[1]) - x[2], dtype='int32'))([padding_shape, tensor_shape,
+                                                                                     min_margins])
+    margins = KL.Lambda(lambda x: tf.stack([tf.cast(x[0], dtype='int32'),
+                                            tf.cast(x[1], dtype='int32')], axis=-1))([min_margins, max_margins])
 
     # pad tensor
-    padded_tensor = KL.Lambda(lambda x: tf.pad(x[0], x[1], 'CONSTANT', constant_values=pad_value))([tensor, margins])
+    padded_tensor = KL.Lambda(lambda x: tf.pad(x[0], tf.cast(x[1], dtype='int32'), mode='CONSTANT',
+                                               constant_values=pad_value))([tensor, margins])
     return padded_tensor

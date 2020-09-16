@@ -60,7 +60,8 @@ def deform_tensor(tensor,
         nonlin_shape = KL.Lambda(lambda x: tf.concat([tf.cast(x, dtype='int32'), tf.convert_to_tensor(small_shape,
                                  dtype='int32')], axis=0))(split_shape[0])
         nonlin_std_prior = KL.Lambda(lambda x: tf.random.uniform((1, 1), maxval=nonlin_std))([])
-        elastic_trans = KL.Lambda(lambda x: tf.random.normal(x[0], stddev=x[1]))([nonlin_shape, nonlin_std_prior])
+        elastic_trans = KL.Lambda(lambda x: tf.random.normal(tf.cast(x[0], 'int32'),
+                                                             stddev=x[1]))([nonlin_shape, nonlin_std_prior])
         elastic_trans._keras_shape = tuple(elastic_trans.get_shape().as_list())
 
         # reshape this field to image size and integrate it

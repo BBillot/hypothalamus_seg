@@ -122,7 +122,6 @@ def build_augmentation_model(im_shape,
 
     # split tensor between image and labels
     image, labels = KL.Lambda(lambda x: tf.split(x, [n_channels, -1], axis=len(im_shape)), name='splitting')(image)
-    labels = KL.Lambda(lambda x: tf.cast(x, dtype='float32'), name='labels_out')(labels)
 
     # apply bias field
     if apply_bias_field:
