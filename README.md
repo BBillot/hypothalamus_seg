@@ -2,9 +2,10 @@
 
 This page hosts the code related to the following publication: \
 \
-**Automated segmentation of the Hypothalamus and associated subunits in brain MRI** \
+**[Automated segmentation of the Hypothalamus and associated subunits in 
+brain MRI](https://www.sciencedirect.com/science/article/pii/S1053811920307734)** \
 B. Billot, M. Bocchetta, E. Todd, A. V. Dalca, J. D. Rohrer, J. E. Iglesias\
-NeuroImage, accepted for publication
+NeuroImage (in press)
 
 This repository enables automated segmentation of the hypothalamus and its associated subunits in T1-weighted scans of 
 approximatively 1mm isotropic resolution. \
@@ -32,10 +33,22 @@ More specifically, this code produces segmentation maps with 11 labels:
 | 10           | right tubular superior  | green                  |
 
 \
+where the aforementioned subunits are defined by the following hypothalamic nuclei: \
+\
+**Anterior-inferior**: suprachiasmatic nucleus; supraoptic nucleus (SON) \
+**Anterior-superior**: preoptic area; paraventricular nucleus (PVN) \
+**Posterior**: mamillary body (including medial and lateral mamillary nuclei); lateral hypothalamus; 
+tuberomamillary nucleus (TMN) \
+**Tubular inferior**: infundibular (or arcuate) nucleus; ventromedial nucleus; SON; lateral tubular nucleus; TMN \
+**Tubular superior**: dorsomedial nucleus; PVN; lateral hypothalamus
+
+\
 The following figure illustrates two segmentation examples in coronal slices obtained by this model for a control 
 subject, and a subject diagnosed with Alzheimer's disease. Subunit colours are indicated by the table above.
 
 ![Segmentation examples](data/hypo.png)
+
+
 
 ----------------
 
@@ -49,9 +62,9 @@ exhaustive list of the python dependencies can be found under `requirements.txt`
 Moreover, this repository relies on several external python packages (already included for convenience):
 - **[lab2im](https://github.com/BBillot/lab2im)**: contains functions for data augmentation, and image processing tools 
 [1],
-- **[neuron](https://github.com/adalca/neuron)**: contains functions for data augmentation, and to build the network 
+- **[neuron](https://github.com/adalca/neurite)**: contains functions for data augmentation, and to build the network 
 [2,3],
-- **[pytool-lib](https://github.com/adalca/pytools-lib)**: library required by the neuron package.
+- **[pystrum](https://github.com/adalca/pystrum)**: library required by the neuron package.
 
 ----------------
 
@@ -60,9 +73,9 @@ Moreover, this repository relies on several external python packages (already in
 ##### 1- installing hypothalamus_seg
 In order to download the segmentation tool (but not the code), click on one of the following links (depending on your 
 operating system):
-- Linux: [hypo_seg_linux.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/ET3llt1lIyFOmW_Q5KmPjPcBLxK5cL5f0U3DBTFNgUwjVw?e=BVmXln)
-- Mac: [hypo_seg_mac.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/Ef-QoqRb9lxHnWC9WEDZl9YBZWzNScx5COYuMIn1Mt5ZYQ?e=XKi5k4)
-- Windows: [hypo_seg_windows.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EUeTeOZLejhIj3wxwAIez3IBaJK99UJWsmbc1z1ly7nxYA?e=n27v8E)
+- Linux: [hypo_seg_linux.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EcC8TshxUIRPjf8oUD_iwK4B26MFuXEUv3dx-UA6wEdXfw?e=hC98jz)
+- Mac: [hypo_seg_mac.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/Ed9h9sRAuaBJnJQicA7_PU8BCAW8msMd-aULWX8neMkXdw?e=csSqSN)
+- Windows: [hypo_seg_windows.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EYoXkDHw0YBHlWaqzOtomQcBzmh3rMYtvJzD77cbe948Rw?e=OhQzQ9)
 
 This will take you to a OneDrive page where you can download a zip file by directly clicking on `Download` (top left). \
 Once the file is downloaded, move it to the desired location on your computer, and unzip it. 
@@ -166,17 +179,15 @@ benjamin.billot.18@ucl.ac.uk
 
 ### References
 
-[1] *A Learning Strategy for Contrast-agnostic MRI Segmentation* \
+[1] **[A Learning Strategy for Contrast-agnostic MRI Segmentation](https://arxiv.org/abs/2003.01995)** \
 Benjamin Billot, Douglas N. Greve, Koen Van Leemput, Bruce Fischl, Juan Eugenio Iglesias, Adrian V. Dalca \
 MIDL 2020 \
-[link](https://arxiv.org/abs/2003.01995)
 
-[2] *Anatomical Priors in Convolutional Networks for Unsupervised Biomedical Segmentation* \
+[2] **[Anatomical Priors in Convolutional Networks for Unsupervised Biomedical 
+Segmentation](http://www.mit.edu/~adalca/files/papers/cvpr2018_priors.pdf)** \
 Adrian V. Dalca, John Guttag, Mert R. Sabuncu \
 CVPR 2018 \
-[link]((http://www.mit.edu/~adalca/files/papers/cvpr2018_priors.pdf))
 
-[3] *Unsupervised Data Imputation via Variational Inference of Deep Subspaces* \
+[3] **[Unsupervised Data Imputation via Variational Inference of Deep Subspaces](https://arxiv.org/abs/1903.03503)** \
 Adrian V. Dalca, John Guttag, Mert R. Sabuncu \
 Arxiv preprint 2019 \
-[link](https://arxiv.org/abs/1903.03503)
