@@ -146,7 +146,8 @@ def resample_tensor(tensor,
     A prior downsampling step can be added if subsample_res is specified. In this case, volume_res should also be
     specified, in order to calculate the downsampling ratio.
     :param tensor: tensor
-    :param resample_shape: list or numpy array of size (n_dims,)
+    :param resample_shape: shape to resample the input tensor to. This can be a list or numpy array of size (n_dims,),
+    where n_dims excludes the batchsize and channels dimensions.
     :param interp_method: interpolation method for resampling, 'linear' or 'nearest'
     :param subsample_res: if not None, this triggers a downsampling of the volume, prior to the resampling step.
     list or numpy array of size (n_dims,).
@@ -158,9 +159,11 @@ def resample_tensor(tensor,
     # reformat resolutions to lists
     subsample_res = utils.reformat_to_list(subsample_res)
     volume_res = utils.reformat_to_list(volume_res)
-    assert len(subsample_res) == len(volume_res), 'subsample_res and volume_res must have the same length, ' \
-                                                  'had {0}, and {1}'.format(len(subsample_res), len(volume_res))
-    n_dims = len(volume_res)
+    if subsample_res is not None:
+        assert volume_res is not None, 'volume_res must be given when providing a subsampling resolution.'
+        assert len(subsample_res) == len(volume_res), 'subsample_res and volume_res must have the same length, ' \
+                                                      'had {0}, and {1}'.format(len(subsample_res), len(volume_res))
+    n_dims = len(resample_shape)
 
     # downsample image
     downsample_shape = None
