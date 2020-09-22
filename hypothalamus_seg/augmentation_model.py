@@ -16,6 +16,7 @@ from ext.lab2im import intensity_augmentation as l2i_ia
 def build_augmentation_model(im_shape,
                              n_channels,
                              label_list,
+                             n_neutral_labels,
                              image_res,
                              target_res=None,
                              output_shape=None,
@@ -68,7 +69,7 @@ def build_augmentation_model(im_shape,
         rand_flip = KL.Lambda(lambda x: K.greater(tf.random.uniform((1, 1), 0, 1), 0.5), name='bool_flip')([])
         if apply_flip_rl_only:
             # flip right and left labels if we right-left flip the image
-            rl_split = np.split(new_label_list, [1, int((n_labels - 1) / 2 + 1)])
+            rl_split = np.split(label_list, [n_neutral_labels, n_neutral_labels + int((n_labels-n_neutral_labels)/2)])
             flipped_lut = np.concatenate((rl_split[0], rl_split[2], rl_split[1]))
             labels = KL.Lambda(lambda y: K.switch(tf.squeeze(y[0]),
                                                   KL.Lambda(lambda x: tf.gather(

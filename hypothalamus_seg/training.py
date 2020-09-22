@@ -20,6 +20,7 @@ def training(image_dir,
              model_dir,
              path_label_list=None,
              save_label_list=None,
+             n_neutral_labels=1,
              batchsize=1,
              target_res=None,
              output_shape=None,
@@ -70,6 +71,8 @@ def training(image_dir,
     :param path_label_list: (optional) path to a numpy array containing all the label values to be segmented.
     By default, this is computed by taking all the label values in the training label maps.
     :param save_label_list: (optional) path where to write the computed list of segmentation labels.
+    :param n_neutral_labels: (optional) number of non-sided labels in label_list. This is used for determining which
+    label values to swap when right/left flipping the training examples. Default is 1.
     :param batchsize: (optional) number of images per mini-batch. Default is 1.
     :param target_res: (optional) target resolution at which to produce the segmentation label maps. The training data
     will be resampled to this resolution before being run through the network. If None, no resampling is performed.
@@ -170,6 +173,7 @@ def training(image_dir,
     augmentation_model = build_augmentation_model(im_shape=im_shape,
                                                   n_channels=n_channels,
                                                   label_list=label_list,
+                                                  n_neutral_labels=n_neutral_labels,
                                                   image_res=image_res,
                                                   target_res=target_res,
                                                   output_shape=output_shape,

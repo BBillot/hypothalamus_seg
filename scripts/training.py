@@ -13,6 +13,8 @@ parser.add_argument("--label_list", type=str, default=None, dest="path_label_lis
                     help="path of numy array with segmentation label values")
 parser.add_argument("--save_label_list", type=str, default=None, dest="save_label_list",
                     help="path where to save the label list, if not initially provided")
+parser.add_argument("--n_neutral_labels", type=int, default=1, dest="n_neutral_labels",
+                    help="number of non-sided labels, default is 1")
 parser.add_argument("--batchsize", type=int, dest="batchsize", default=1, help="batch size")
 parser.add_argument("--target_res", type=str, dest="target_res", default=None,
                     help="path to numpy array with target resolution for the segmentation maps")
