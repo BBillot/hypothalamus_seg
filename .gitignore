@@ -19,7 +19,6 @@ scripts/check_model.py
 scripts/combine_results.py
 scripts/edit_subunit_labels.py
 scripts/label_fusion_analysis.py
-scripts/predict_full_options.py
 scripts/prepare_QC.py
 scripts/preprocess_cortex.py
 scripts/training_gpuid.py

@@ -181,13 +181,13 @@ benjamin.billot.18@ucl.ac.uk
 
 [1] **[A Learning Strategy for Contrast-agnostic MRI Segmentation](https://arxiv.org/abs/2003.01995)** \
 Benjamin Billot, Douglas N. Greve, Koen Van Leemput, Bruce Fischl, Juan Eugenio Iglesias, Adrian V. Dalca \
-MIDL 2020 \
+MIDL 2020 
 
 [2] **[Anatomical Priors in Convolutional Networks for Unsupervised Biomedical 
 Segmentation](http://www.mit.edu/~adalca/files/papers/cvpr2018_priors.pdf)** \
 Adrian V. Dalca, John Guttag, Mert R. Sabuncu \
-CVPR 2018 \
+CVPR 2018 
 
 [3] **[Unsupervised Data Imputation via Variational Inference of Deep Subspaces](https://arxiv.org/abs/1903.03503)** \
 Adrian V. Dalca, John Guttag, Mert R. Sabuncu \
-Arxiv preprint 2019 \
+Arxiv preprint 2019 
