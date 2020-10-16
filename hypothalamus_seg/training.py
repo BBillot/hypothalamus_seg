@@ -161,13 +161,11 @@ def training(image_dir,
     n_labels = np.size(label_list)
 
     # prepare model folder
-    if not os.path.isdir(model_dir):
-        os.mkdir(model_dir)
+    utils.mkdir(model_dir)
 
     # prepare log folder
     log_dir = os.path.join(model_dir, 'logs')
-    if not os.path.isdir(log_dir):
-        os.mkdir(log_dir)
+    utils.mkdir(log_dir)
 
     # transformation model
     augmentation_model = build_augmentation_model(im_shape=im_shape,

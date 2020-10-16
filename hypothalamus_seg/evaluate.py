@@ -128,8 +128,7 @@ def reproducibility_test(gt_dir,
     """
 
     # create result folder
-    if not os.path.exists(result_dir):
-        os.mkdir(result_dir)
+    utils.mkdir(result_dir)
 
     # get list label maps to compare
     path_gt_labels = utils.list_images_in_folder(gt_dir)
@@ -183,4 +182,3 @@ def reproducibility_test(gt_dir,
     np.save(os.path.join(result_dir, 'mean_dist.npy'), mean_dists)
 
     return dice_coefs, max_dists, mean_dists
-
