@@ -115,7 +115,7 @@ def build_augmentation_model(im_shape,
         sigma = utils.get_std_blurring_mask_for_downsampling(target_res, image_res)
         kernels_list = l2i_et.get_gaussian_1d_kernels(sigma)
         blurred_channels = list()
-        for i in range(1, n_channels):
+        for i in range(n_channels):
             blurred_channels.append(l2i_et.blur_tensor(split[i], kernels_list, n_dims=n_dims))
         image = KL.concatenate(blurred_channels + [split[-1]])
         # resample image at target resolution
@@ -130,8 +130,21 @@ def build_augmentation_model(im_shape,
 
     # intensity augmentation
     if apply_intensity_augmentation:
-        image = l2i_ia.min_max_normalisation(image)
-        image = l2i_ia.gamma_augmentation(image, std=0.5)
+        # split channels
+        if n_channels > 1:
+            split = KL.Lambda(lambda x: tf.split(x, [1] * n_channels, axis=-1))(image)
+        else:
+            split = [image]
+        intensity_augmented_channels = list()
+        for i, channel in enumerate(split):
+            channel = l2i_ia.min_max_normalisation(channel)
+            # intensity_augmented_channels.append(l2i_ia.gamma_augmentation(channel, std=0.5))
+            intensity_augmented_channels.append(channel)
+        # concatenate all channels back
+        if n_channels > 1:
+            image = KL.concatenate(intensity_augmented_channels)
+        else:
+            image = intensity_augmented_channels[0]
 
     # build model
     im_trans_model = Model(inputs=list_inputs, outputs=[image, labels])
