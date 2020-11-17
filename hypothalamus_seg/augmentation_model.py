@@ -138,8 +138,7 @@ def build_augmentation_model(im_shape,
         intensity_augmented_channels = list()
         for i, channel in enumerate(split):
             channel = l2i_ia.min_max_normalisation(channel)
-            # intensity_augmented_channels.append(l2i_ia.gamma_augmentation(channel, std=0.5))
-            intensity_augmented_channels.append(channel)
+            intensity_augmented_channels.append(l2i_ia.gamma_augmentation(channel, std=0.5))
         # concatenate all channels back
         if n_channels > 1:
             image = KL.concatenate(intensity_augmented_channels)

@@ -248,6 +248,13 @@ def preprocess_image(im_path, n_levels, crop_shape=None, padding=None):
         im = np.zeros(im.shape)
     else:
         im = (im - m) / (M - m)
+    # # normalise image
+    # m = np.mean(im)
+    # M = np.max(im)
+    # if M == m:
+    #     im = np.zeros(im.shape)
+    # else:
+    #     im = (im - m) / M
 
     # add batch and channel axes
     if n_channels > 1:

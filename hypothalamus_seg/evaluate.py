@@ -107,6 +107,23 @@ def compute_non_parametric_paired_test(dice_ref, dice_compare, eval_indices=None
     return np.array(pvalues)
 
 
+def cohens_d(volumes_x, volumes_y):
+
+    means_x = np.mean(volumes_x, axis=0)
+    means_y = np.mean(volumes_y, axis=0)
+
+    var_x = np.var(volumes_x, axis=0)
+    var_y = np.var(volumes_y, axis=0)
+
+    n_x = np.shape(volumes_x)[0]
+    n_y = np.shape(volumes_y)[0]
+
+    std = np.sqrt(((n_x-1)*var_x + (n_y-1)*var_y) / (n_x + n_y - 2))
+    cohensd = (means_x - means_y) / std
+
+    return cohensd
+
+
 def reproducibility_test(gt_dir,
                          seg_dir,
                          result_dir,
