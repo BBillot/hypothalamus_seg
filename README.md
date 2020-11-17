@@ -7,6 +7,13 @@ brain MRI](https://www.sciencedirect.com/science/article/pii/S1053811920307734)*
 B. Billot, M. Bocchetta, E. Todd, A. V. Dalca, J. D. Rohrer, J. E. Iglesias\
 NeuroImage (in press)
 
+**IMPORTANT**: any volume analysis made by downloaded this code before the **17/11/2020** will have to be rerun, as we 
+noticed a problem in the volume computation. This issue has now been fixed, and the compile code 
+(distributed in zip files) has been updated.
+
+This tool is now available in the development version of **[FreeSurfer](https://surfer.nmr.mgh.harvard.edu/fswiki/DownloadAndInstall)** ! \
+See how to use the FreeSurfer version [here](https://surfer.nmr.mgh.harvard.edu/fswiki/HypothalamicSubunits).
+
 This repository enables automated segmentation of the hypothalamus and its associated subunits in T1-weighted scans of 
 approximatively 1mm isotropic resolution. \
 The presented tool is based on a convolutional neural network, which allows to retrieve segmentations in a very short 
@@ -73,9 +80,9 @@ Moreover, this repository relies on several external python packages (already in
 ##### 1- installing hypothalamus_seg
 In order to download the segmentation tool (but not the code), click on one of the following links (depending on your 
 operating system):
-- Linux: [hypo_seg_linux.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EcC8TshxUIRPjf8oUD_iwK4B26MFuXEUv3dx-UA6wEdXfw?e=hC98jz)
-- Mac: [hypo_seg_mac.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/Ed9h9sRAuaBJnJQicA7_PU8BCAW8msMd-aULWX8neMkXdw?e=csSqSN)
-- Windows: [hypo_seg_windows.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EYoXkDHw0YBHlWaqzOtomQcBzmh3rMYtvJzD77cbe948Rw?e=OhQzQ9)
+- Linux: [hypo_seg_linux.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EYC4OStPsd9KlBVx8h2G2VcBEBiwA62LkSxfot9SjdvtYA?e=4RFsHq)
+- Mac: [hypo_seg_mac.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/ERaTrZUzUr9Lrdgxw5cZdgcB4VItQAaQdM8lgfvTi6N-mw?e=xkdOtC)
+- Windows: [hypo_seg_windows.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EZBjLVIY3RdNkCY3JX1rq-0BvoWqPjAfFrUb_pp_UqKlTw?e=2xgZUz)
 
 This will take you to a OneDrive page where you can download a zip file by directly clicking on `Download` (top left). \
 Once the file is downloaded, move it to the desired location on your computer, and unzip it. 
@@ -140,7 +147,7 @@ cd <path to hypothalamus_seg>
 Depending on your operatin system, you can then simply segment images by calling:
 ```
 # In Linux or in Mac:
-./hypo_seg <image> <segmentation> --out_posteriors <posteriors> --out_volumes <volume> 
+./hypo_seg <image> <segmentation> --out_posteriors <posteriors> --out_volumes <volume>
 
 # In Windows:
 ./hypo_seg.exe <image> <segmentation> --out_posteriors <posteriors> --out_volumes <volume> 
@@ -155,6 +162,13 @@ This must be a folder if `<path image>` designates a folder.
 - `<volume>` (optional) is the path to an output csv file where the volumes of all subunits
 will be saved for all segmented scans (one csv file for all subjects; e.g. /path/to/volumes.csv)
 
+\
+Additional optional flags are also available:
+- `--threads`: to indicate the number of cores to be used if running on a CPU (example: `--threads 3` to run on 3 cores).
+ This value defaults to 1, but we recommand increasing it for faster analysis.
+- `--cpu`: to enforce the code to run on the CPU, even if a GPU is available.
+- `--crop`: to run the code on a smaller patch of the provided shape (example: `--crop 160` to run on 3 cores). The patches are extracted around the centre of 
+the inputs. This value defaults to 184, but can be decreased for faster analysis.
 
 \
 You can have access to these explanations directly by typing once in `<path to hypothalamus_seg>`:
