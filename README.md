@@ -7,13 +7,16 @@ brain MRI](https://www.sciencedirect.com/science/article/pii/S1053811920307734)*
 B. Billot, M. Bocchetta, E. Todd, A. V. Dalca, J. D. Rohrer, J. E. Iglesias\
 NeuroImage (in press)
 
+\
 **IMPORTANT**: any volume analysis made by downloaded this code before the **17/11/2020** will have to be rerun, as we 
 noticed a problem in the volume computation. This issue has now been fixed, and the compile code 
-(distributed in zip files) has been updated.
+(distributed in zip files) has been updated. This does not concern the segmentations, which are left unchanged.
 
+\
 This tool is now available in the development version of **[FreeSurfer](https://surfer.nmr.mgh.harvard.edu/fswiki/DownloadAndInstall)** ! \
 See how to use the FreeSurfer version [here](https://surfer.nmr.mgh.harvard.edu/fswiki/HypothalamicSubunits).
 
+\
 This repository enables automated segmentation of the hypothalamus and its associated subunits in T1-weighted scans of 
 approximatively 1mm isotropic resolution. \
 The presented tool is based on a convolutional neural network, which allows to retrieve segmentations in a very short 
@@ -22,7 +25,6 @@ The segmentation model was trained by applying aggressive data augmentation, whi
 in acquisition parameters (sequence, platform, head positioning), and in anatomy (e.g. atrophy patterns linked to 
 ageing or different pathologies).
 
-\
 More specifically, this code produces segmentation maps with 11 labels:
 
 | Label number | Associated subunit      | Colour in figure below |
