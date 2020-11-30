@@ -43,15 +43,12 @@ def training(image_dir,
              unet_feat_count=24,
              feat_multiplier=1,
              dropout=0,
-             no_batch_norm=False,
              activation='elu',
              lr=1e-4,
              lr_decay=0,
              wl2_epochs=5,
              dice_epochs=200,
              steps_per_epoch=1000,
-             background_weight=1e-4,
-             include_background=True,
              load_model_file=None,
              initial_epoch_wl2=0,
              initial_epoch_dice=0):
@@ -120,7 +117,6 @@ def training(image_dir,
     :param unet_feat_count: (optional) number of feature for the first layr of the Unet. Default is 24.
     :param feat_multiplier: (optional) multiply the number of feature by this nummber at each new level. Default is 1.
     :param dropout: (optional) probability of drpout for the Unet. Deafult is 0, where no dropout is applied.
-    :param no_batch_norm: (optional) wheter to remove batch normalisation. Default is False, where BN is applied.
     :param activation: (optional) activation function. Can be 'elu', 'relu'.
 
     # ----------------------------------------------- Training parameters ----------------------------------------------
@@ -131,8 +127,6 @@ def training(image_dir,
     :param dice_epochs: (optional) number of epochs with the soft Dice loss function. default is 100.
     :param steps_per_epoch: (optional) number of steps per epoch. Default is 1000. Since no online validation is
     possible, this is equivalent to the frequency at which the models are saved.
-    :param background_weight: (optional) weight of the background when computing loss. Default is 1e-4.
-    :param include_background: (optional) whether to include Dice of background when evaluating the loss function.
     :param load_model_file: (optional) path of an already saved model to load before starting the training.
     :param initial_epoch_wl2: (optional) initial epoch for wl2 training. Useful for resuming training.
     :param initial_epoch_dice: (optional) initial epoch for dice training. Useful for resuming training.
@@ -190,10 +184,6 @@ def training(image_dir,
     unet_input_shape = augmentation_model.output[0].get_shape().as_list()[1:]
 
     # prepare the segmentation model
-    if no_batch_norm:
-        batch_norm_dim = None
-    else:
-        batch_norm_dim = -1
     unet_model = nrn_models.unet(nb_features=unet_feat_count,
                                  input_shape=unet_input_shape,
                                  nb_levels=n_levels,
@@ -202,7 +192,7 @@ def training(image_dir,
                                  feat_mult=feat_multiplier,
                                  nb_conv_per_level=nb_conv_per_level,
                                  conv_dropout=dropout,
-                                 batch_norm=batch_norm_dim,
+                                 batch_norm=-1,
                                  activation=activation,
                                  input_model=augmentation_model)
 
@@ -223,7 +213,6 @@ def training(image_dir,
         wl2_model = metrics_model.metrics_model(input_shape=unet_input_shape[:-1] + [n_labels],
                                                 input_model=wl2_model,
                                                 metrics='wl2',
-                                                weight_background=background_weight,
                                                 name='metrics_model')
         if load_model_file is not None:
             print('loading', load_model_file)
@@ -235,7 +224,6 @@ def training(image_dir,
     if dice_epochs > 0:
         dice_model = metrics_model.metrics_model(input_shape=unet_input_shape[:-1] + [n_labels],
                                                  input_model=unet_model,
-                                                 include_background=include_background,
                                                  name='metrics_model')
         if wl2_epochs > 0:
             last_wl2_model_name = os.path.join(model_dir, 'wl2_%03d.h5' % wl2_epochs)

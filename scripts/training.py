@@ -50,7 +50,6 @@ parser.add_argument("--unet_features", type=int, dest="unet_feat_count", default
 parser.add_argument("--feat_mult", type=int, dest="feat_multiplier", default=2,
                     help="number by which to multiply the number of features at each level")
 parser.add_argument("--dropout", type=float, dest="dropout", default=0, help="dropout probability")
-parser.add_argument("--no_batch_norm", action='store_true', dest="no_batch_norm", help="deactivate batch normalisation")
 parser.add_argument("--activation", type=str, dest="activation", default='elu', help="activation function")
 
 # training parameters
@@ -60,10 +59,6 @@ parser.add_argument("--wl2_epochs", type=int, dest="wl2_epochs", default=5, help
 parser.add_argument("--dice_epochs", type=int, dest="dice_epochs", default=200, help="number of iterations")
 parser.add_argument("--steps_per_epoch", type=int, dest="steps_per_epoch", default=1000,
                     help="frequency of model saves")
-parser.add_argument("--background_weight", type=float, dest="background_weight", default=1e-4,
-                    help="background of weighted l2 training")
-parser.add_argument("--exclude_background", action='store_false', dest="include_background",
-                    help="whether to exclude the background from the loss computation")
 parser.add_argument("--load_model_file", type=str, dest="load_model_file", default=None,
                     help="optional h5 model file to initialise the training with.")
 parser.add_argument("--initial_epoch_wl2", type=int, dest="initial_epoch_wl2", default=0,

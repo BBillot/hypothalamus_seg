@@ -36,7 +36,6 @@ def predict(path_images,
             nb_conv_per_level=2,
             unet_feat_count=24,
             feat_multiplier=2,
-            no_batch_norm=False,
             activation='elu',
             gt_folder=None):
 
@@ -91,8 +90,7 @@ def predict(path_images,
 
             # build network
             net = build_model(path_model, model_input_shape, resample, im_res, n_levels, len(label_list), conv_size,
-                              nb_conv_per_level, unet_feat_count, feat_multiplier, no_batch_norm, activation,
-                              sigma_smoothing)
+                              nb_conv_per_level, unet_feat_count, feat_multiplier, activation, sigma_smoothing)
 
         # predict posteriors
         prediction_patch = net.predict(image)
@@ -266,7 +264,7 @@ def preprocess_image(im_path, n_levels, crop_shape=None, padding=None):
 
 
 def build_model(model_file, input_shape, resample, im_res, n_levels, n_lab, conv_size, nb_conv_per_level,
-                unet_feat_count, feat_multiplier, no_batch_norm, activation, sigma_smoothing):
+                unet_feat_count, feat_multiplier, activation, sigma_smoothing):
 
     # initialisation
     net = None
@@ -284,10 +282,6 @@ def build_model(model_file, input_shape, resample, im_res, n_levels, n_lab, conv
         input_shape = resample_shape + [n_channels]
 
     # build UNet
-    if no_batch_norm:
-        batch_norm_dim = None
-    else:
-        batch_norm_dim = -1
     net = nrn_models.unet(nb_features=unet_feat_count,
                           input_shape=input_shape,
                           nb_levels=n_levels,
@@ -308,7 +302,7 @@ def build_model(model_file, input_shape, resample, im_res, n_levels, n_lab, conv
                           add_prior_layer_reg=0,
                           layer_nb_feats=None,
                           conv_dropout=0,
-                          batch_norm=batch_norm_dim,
+                          batch_norm=-1,
                           input_model=net)
     net.load_weights(model_file, by_name=True)
 
