@@ -28,6 +28,8 @@ parser.add_argument("--no_linear_trans", action='store_false', dest="apply_linea
 parser.add_argument("--scaling", type=float, default=None, dest="scaling_bounds", help="scaling range")
 parser.add_argument("--rotation", type=float, default=None, dest="rotation_bounds", help="rotation range")
 parser.add_argument("--shearing", type=float, default=None, dest="shearing_bounds", help="shearing range")
+parser.add_argument("--90_rotations", action='store_true', dest="enable_90_rotations",
+                    help="wehther to introduce additional rotations of 0, 90, 180, or 270 degrees.")
 parser.add_argument("--no_elastic_trans", action='store_false', dest="apply_nonlin_trans",
                     help="deactivate elastic transform")
 parser.add_argument("--nonlin_std", type=float, default=3, dest="nonlin_std",

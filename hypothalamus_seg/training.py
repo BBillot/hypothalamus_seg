@@ -30,6 +30,7 @@ def training(image_dir,
              scaling_bounds=0.1,
              rotation_bounds=15,
              shearing_bounds=.012,
+             enable_90_rotations=False,
              apply_nonlin_trans=True,
              nonlin_std=3.,
              nonlin_shape_factor=.04,
@@ -93,6 +94,8 @@ def training(image_dir,
     bounds are centred on 0 rather than 1, i.e. (0+rotation_bounds[i], 0-rotation_bounds[i]).
     If None (default), rotation_bounds = 15.
     :param shearing_bounds: (optional) same as scaling bounds. If None (default), shearing_bounds = 0.01.
+    :param enable_90_rotations: (optional) wheter to additionally (i.e. additionally to rotation bound) rotate the input
+     by a random angle chosen in {0, 90, 180, 270}.
     :param apply_nonlin_trans: (optional) whether to apply a random elastic deformation to the training data.
     This is done by sampling a small non linear field of size batch*(dim_1*...*dim_n)*n_dims from a Gaussian
     distribution. This field is then resampled to image size, and finally integrated to obtain a diffeomorphic elastic
@@ -204,7 +207,8 @@ def training(image_dir,
                                             apply_linear_trans=apply_linear_trans,
                                             scaling_bounds=scaling_bounds,
                                             rotation_bounds=rotation_bounds,
-                                            shearing_bounds=shearing_bounds)
+                                            shearing_bounds=shearing_bounds,
+                                            enable_90_rotations=enable_90_rotations)
     training_generator = utils.build_training_generator(train_example_gen, batchsize)
 
     # pre-training with weighted L2, input is fit to the softmax rather than the probabilities

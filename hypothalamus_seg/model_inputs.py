@@ -13,7 +13,8 @@ def image_seg_generator(path_images,
                         apply_linear_trans=True,
                         scaling_bounds=None,
                         rotation_bounds=None,
-                        shearing_bounds=None):
+                        shearing_bounds=None,
+                        enable_90_rotations=False):
 
     # get image info
     _, _, n_dims, _, _, _ = utils.get_volume_info(path_images[0])
@@ -45,7 +46,12 @@ def image_seg_generator(path_images,
                 # get affine transformation: rotate, scale, shear (translation done during random cropping)
                 scaling = utils.draw_value_from_distribution(scaling_bounds, size=n_dims, centre=1, default_range=.15)
                 if n_dims == 2:
-                    rotation = utils.draw_value_from_distribution(rotation_bounds, default_range=15.0)
+                    # rotation = utils.draw_value_from_distribution(rotation_bounds, default_range=15.0)
+                    if enable_90_rotations:
+                        centre = 90. * np.random.randint(0, 4)
+                    else:
+                        centre = 0
+                    rotation = utils.draw_value_from_distribution(rotation_bounds, default_range=15.0, centre=centre)
                 else:
                     rotation = utils.draw_value_from_distribution(rotation_bounds, size=n_dims, default_range=15.0)
                 shearing = utils.draw_value_from_distribution(shearing_bounds, size=n_dims**2-n_dims, default_range=.01)
