@@ -43,6 +43,8 @@ parser.add_argument("--bias_shape_factor", type=float, default=0.025, dest="bias
                     help="ratio between the size of the image and the sampled bias field")
 parser.add_argument("--no_intensity_augmentation", action='store_false', dest="augment_intensitites",
                     help="deactivate intensity augmentation")
+parser.add_argument("--augment_channels_together", action='store_false', dest="augment_intensitites",
+                    help="augment intensities of all channels together rather than separately.")
 
 # Architecture parameters
 parser.add_argument("--n_levels", type=int, dest="n_levels", default=3, help="number of levels for the UNet")

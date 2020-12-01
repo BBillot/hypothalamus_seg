@@ -31,7 +31,8 @@ def build_augmentation_model(im_shape,
                              apply_bias_field=True,
                              bias_field_std=.3,
                              bias_shape_factor=0.025,
-                             apply_intensity_augmentation=True):
+                             apply_intensity_augmentation=True,
+                             augment_channels_separately=True):
 
     # reformat resolutions
     im_shape = utils.reformat_to_list(im_shape)
@@ -130,20 +131,26 @@ def build_augmentation_model(im_shape,
 
     # intensity augmentation
     if apply_intensity_augmentation:
-        # split channels
-        if n_channels > 1:
-            split = KL.Lambda(lambda x: tf.split(x, [1] * n_channels, axis=-1))(image)
+
+        if (not augment_channels_separately) | (n_channels == 1):
+            image = l2i_ia.min_max_normalisation(image)
+            image = l2i_ia.gamma_augmentation(image, std=0.5)
+
         else:
-            split = [image]
-        intensity_augmented_channels = list()
-        for i, channel in enumerate(split):
-            channel = l2i_ia.min_max_normalisation(channel)
-            intensity_augmented_channels.append(l2i_ia.gamma_augmentation(channel, std=0.5))
-        # concatenate all channels back
-        if n_channels > 1:
-            image = KL.concatenate(intensity_augmented_channels)
-        else:
-            image = intensity_augmented_channels[0]
+            # split channels
+            if n_channels > 1:
+                split = KL.Lambda(lambda x: tf.split(x, [1] * n_channels, axis=-1))(image)
+            else:
+                split = [image]
+            intensity_augmented_channels = list()
+            for i, channel in enumerate(split):
+                channel = l2i_ia.min_max_normalisation(channel)
+                intensity_augmented_channels.append(l2i_ia.gamma_augmentation(channel, std=0.5))
+            # concatenate all channels back
+            if n_channels > 1:
+                image = KL.concatenate(intensity_augmented_channels)
+            else:
+                image = intensity_augmented_channels[0]
 
     # build model
     im_trans_model = Model(inputs=list_inputs, outputs=[image, labels])
