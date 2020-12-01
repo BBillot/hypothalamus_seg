@@ -11,9 +11,9 @@ def image_seg_generator(path_images,
                         batchsize=1,
                         n_channels=1,
                         apply_linear_trans=True,
-                        scaling_bounds=None,
-                        rotation_bounds=None,
-                        shearing_bounds=None,
+                        scaling_bounds=0.15,
+                        rotation_bounds=15,
+                        shearing_bounds=.012,
                         enable_90_rotations=False):
 
     # get image info

@@ -25,21 +25,21 @@ parser.add_argument("--no_flip", action='store_false', dest="flipping", help="de
 parser.add_argument("--flip_rl_only", action='store_true', dest="flip_rl_only", help="only flip along right/left axis")
 parser.add_argument("--no_linear_trans", action='store_false', dest="apply_linear_trans",
                     help="deactivate linear transform")
-parser.add_argument("--scaling", type=float, default=None, dest="scaling_bounds", help="scaling range")
-parser.add_argument("--rotation", type=float, default=None, dest="rotation_bounds", help="rotation range")
-parser.add_argument("--shearing", type=float, default=None, dest="shearing_bounds", help="shearing range")
+parser.add_argument("--scaling", type=float, default=.15, dest="scaling_bounds", help="scaling range")
+parser.add_argument("--rotation", type=float, default=15, dest="rotation_bounds", help="rotation range")
+parser.add_argument("--shearing", type=float, default=.012, dest="shearing_bounds", help="shearing range")
 parser.add_argument("--90_rotations", action='store_true', dest="enable_90_rotations",
                     help="wehther to introduce additional rotations of 0, 90, 180, or 270 degrees.")
 parser.add_argument("--no_elastic_trans", action='store_false', dest="apply_nonlin_trans",
                     help="deactivate elastic transform")
 parser.add_argument("--nonlin_std", type=float, default=3, dest="nonlin_std",
                     help="std dev. of the elastic deformation before upsampling to image size")
-parser.add_argument("--nonlin_shape_factor", type=float, default=0.04, dest="nonlin_shape_factor",
+parser.add_argument("--nonlin_shape_factor", type=float, default=.04, dest="nonlin_shape_factor",
                     help="ratio between the size of the image and the sampled elastic deformation")
 parser.add_argument("--no_bias_field", action='store_false', dest="apply_bias_field", help="deactivate bias field")
-parser.add_argument("--bias_field_std", type=float, default=0.5, dest="bias_field_std",
+parser.add_argument("--bias_field_std", type=float, default=.5, dest="bias_field_std",
                     help="std dev. of the bias field before upsampling to image size")
-parser.add_argument("--bias_shape_factor", type=float, default=0.025, dest="bias_shape_factor",
+parser.add_argument("--bias_shape_factor", type=float, default=.025, dest="bias_shape_factor",
                     help="ratio between the size of the image and the sampled bias field")
 parser.add_argument("--no_intensity_augmentation", action='store_false', dest="augment_intensitites",
                     help="deactivate intensity augmentation")

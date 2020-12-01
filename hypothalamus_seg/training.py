@@ -27,7 +27,7 @@ def training(image_dir,
              flipping=True,
              flip_rl_only=False,
              apply_linear_trans=True,
-             scaling_bounds=0.1,
+             scaling_bounds=0.15,
              rotation_bounds=15,
              shearing_bounds=.012,
              enable_90_rotations=False,
@@ -90,11 +90,12 @@ def training(image_dir,
     (1-scaling_bounds, 1+scaling_bounds) for each dimension.
     2) the path to a numpy array of shape (2, n_dims), in which case the scaling factor is sampled from the uniform
     distribution of bounds (scaling_bounds[0, i], scaling_bounds[1, i]) for the i-th dimension.
-    If None (default), scaling_range = 0.15
+    3) False, in which case scaling is completely turned off.
+    Default is scaling_bounds = 0.15
     :param rotation_bounds: (optional) same as scaling bounds but for the rotation angle, except that for case 1 the
     bounds are centred on 0 rather than 1, i.e. (0+rotation_bounds[i], 0-rotation_bounds[i]).
-    If None (default), rotation_bounds = 15.
-    :param shearing_bounds: (optional) same as scaling bounds. If None (default), shearing_bounds = 0.01.
+    Default is rotation_bounds = 15.
+    :param shearing_bounds: (optional) same as scaling bounds. Default is shearing_bounds = 0.01.
     :param enable_90_rotations: (optional) wheter to additionally (i.e. additionally to rotation bound) rotate the input
      by a random angle chosen in {0, 90, 180, 270}.
     :param apply_nonlin_trans: (optional) whether to apply a random elastic deformation to the training data.
