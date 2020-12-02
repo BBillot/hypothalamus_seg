@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 from hypothalamus_seg.training import training
+from ext.lab2im.utils import infer
 
 parser = ArgumentParser()
 
@@ -25,9 +26,9 @@ parser.add_argument("--no_flip", action='store_false', dest="flipping", help="de
 parser.add_argument("--flip_rl_only", action='store_true', dest="flip_rl_only", help="only flip along right/left axis")
 parser.add_argument("--no_linear_trans", action='store_false', dest="apply_linear_trans",
                     help="deactivate linear transform")
-parser.add_argument("--scaling", type=float, default=.15, dest="scaling_bounds", help="scaling range")
-parser.add_argument("--rotation", type=float, default=15, dest="rotation_bounds", help="rotation range")
-parser.add_argument("--shearing", type=float, default=.012, dest="shearing_bounds", help="shearing range")
+parser.add_argument("--scaling", type=infer, default=.15, dest="scaling_bounds", help="scaling range")
+parser.add_argument("--rotation", type=infer, default=15, dest="rotation_bounds", help="rotation range")
+parser.add_argument("--shearing", type=infer, default=.012, dest="shearing_bounds", help="shearing range")
 parser.add_argument("--90_rotations", action='store_true', dest="enable_90_rotations",
                     help="wehther to introduce additional rotations of 0, 90, 180, or 270 degrees.")
 parser.add_argument("--no_elastic_trans", action='store_false', dest="apply_nonlin_trans",
