@@ -46,7 +46,6 @@ def image_seg_generator(path_images,
                 # get affine transformation: rotate, scale, shear (translation done during random cropping)
                 scaling = utils.draw_value_from_distribution(scaling_bounds, size=n_dims, centre=1, default_range=.15)
                 if n_dims == 2:
-                    # rotation = utils.draw_value_from_distribution(rotation_bounds, default_range=15.0)
                     if enable_90_rotations:
                         centre = 90. * np.random.randint(0, 4)
                     else:
