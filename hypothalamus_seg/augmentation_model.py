@@ -106,7 +106,7 @@ def build_augmentation_model(im_shape,
 
     # cropping
     if cropping_shape != im_shape[:-1]:
-        image, _ = l2i_sp.random_cropping(image, cropping_shape, n_dims)
+        image = l2i_sp.random_cropping(image, cropping_shape, n_dims)
 
     # resample image to new resolution if necessary
     if cropping_shape != output_shape:

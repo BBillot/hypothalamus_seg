@@ -15,9 +15,11 @@ import ext.neuron.layers as nrn_layers
 def deform_tensor(tensor,
                   affine_trans=None,
                   apply_elastic_trans=True,
-                  interp_method='linear',
+                  inter_method='linear',
                   nonlin_std=2.,
-                  nonlin_shape_factor=.0625):
+                  nonlin_shape_factor=.0625,
+                  additional_tensor=None,
+                  additional_inter_method='linear'):
     """This function spatially deforms a tensor with a combination of affine and elastic transformations.
     :param tensor: input tensor to deform. Expected to have shape [batchsize, shape_dim1, ..., shape_dimn, channel].
     :param affine_trans: (optional) tensor of shape [batchsize, n_dims+1, n_dims+1] corresponding to an affine 
@@ -29,12 +31,14 @@ def deform_tensor(tensor,
     3) it is integrated to obtain a diffeomorphic transformation
     4) finally, it is resized (again with trilinear interpolation) to full image size
     Default is None, where no elastic transformation is applied.
-    :param interp_method: (optional) interpolation method when deforming the input tensor. Can be 'linear', or 'nearest'
+    :param inter_method: (optional) interpolation method when deforming the input tensor. Can be 'linear', or 'nearest'
     :param nonlin_std: (optional) maximum value of the standard deviation of the normal distribution from which we
     sample the small-size SVF.
     :param nonlin_shape_factor: (optional) ration between the shape of the input tensor and the shape of the small field
     for elastic deformation.
-    :return: tensor of the same shape as volume
+    :param additional_tensor: (optional) in case you want to deform another tensor with the same transformation
+    :param additional_inter_method: (optional) interpolation methods for the additional tensor
+    :return: tensor of the same shape as volume (a tuple, if additional tensor requested)
     """
 
     assert (affine_trans is not None) | apply_elastic_trans, 'affine_trans or elastic_trans should be provided'
@@ -44,7 +48,7 @@ def deform_tensor(tensor,
     tensor._keras_shape = tuple(tensor.get_shape().as_list())
     volume_shape = tensor.get_shape().as_list()[1: -1]
     n_dims = len(volume_shape)
-    trans_inputs = [tensor]
+    trans_inputs = list()
 
     # add affine deformation to inputs list
     if affine_trans is not None:
@@ -71,16 +75,23 @@ def deform_tensor(tensor,
         nonlin_field = nrn_layers.Resize(size=volume_shape, interp_method='linear')(nonlin_field)
         trans_inputs.append(nonlin_field)
 
-    # apply deformations
-    return nrn_layers.SpatialTransformer(interp_method=interp_method)(trans_inputs)
+    # apply deformations and return tensors
+    if additional_tensor is None:
+        return nrn_layers.SpatialTransformer(interp_method=inter_method)([tensor] + trans_inputs)
+    else:
+        additional_tensor._keras_shape = tuple(additional_tensor.get_shape().as_list())
+        tens1 = nrn_layers.SpatialTransformer(interp_method=inter_method)([tensor] + trans_inputs)
+        tens2 = nrn_layers.SpatialTransformer(interp_method=additional_inter_method)([additional_tensor] + trans_inputs)
+        return tens1, tens2
 
 
-def random_cropping(tensor, crop_shape, n_dims=3):
+def random_cropping(tensor, crop_shape, n_dims=3, additional_tensor=None):
     """Randomly crop an input tensor to a tensor of a given shape. This cropping is applied to all channels.
     :param tensor: input tensor to crop
     :param crop_shape: shape of the cropped tensor, excluding batch and channel dimension.
     :param n_dims: (optional) number of dimensions of the initial image (excluding batch and channel dimensions)
-    :return: cropped tensor
+    :param additional_tensor: (optional) in case you want to apply the same cropping to another tensor
+    :return: cropped tensor (a tuple, if additional tensor requested)
     example: if tensor has shape [2, 160, 160, 160, 3], and crop_shape=[96, 128, 96], then this function returns a
     tensor of shape [2, 96, 128, 96, 3], with randomly selected cropping indices.
     """
@@ -104,12 +115,16 @@ def random_cropping(tensor, crop_shape, n_dims=3):
 
     # perform cropping
     tensor = KL.Lambda(lambda x: tf.slice(x[0], begin=tf.cast(x[1], dtype='int32'),
-                                          size=tf.cast(x[2], dtype='int32')))([tensor, crop_idx, patch_shape_tens])
+                                              size=tf.cast(x[2], dtype='int32')))([tensor, crop_idx, patch_shape_tens])
+    if additional_tensor is None:
+        return tensor
+    else:
+        additional_tensor = KL.Lambda(lambda x: tf.slice(x[0], begin=tf.cast(x[1], dtype='int32'), size=tf.cast(x[2],
+                                      dtype='int32')))([additional_tensor, crop_idx, patch_shape_tens])
+        return tensor, additional_tensor
 
-    return tensor, crop_idx
 
-
-def label_map_random_flipping(labels, label_list, n_neutral_labels, aff, n_dims=3):
+def label_map_random_flipping(labels, label_list, n_neutral_labels, aff, n_dims=3, additional_tensor=None):
     """This function flips a label map with a probability of 0.5.
     Right/left label values are also swapped if the label map is flipped in order to preserve the right/left sides.
     :param labels: input label map
@@ -118,6 +133,8 @@ def label_map_random_flipping(labels, label_list, n_neutral_labels, aff, n_dims=
     :param n_neutral_labels: number of non-sided labels
     :param aff: affine matrix of the initial input label map, to find the right/left axis.
     :param n_dims: (optional) number of dimensions of the initial image (excluding batch and channel dimensions)
+    :params additional_tensor: (optional) in case you want to apply the same flipping to another tensor. This new tensor
+    is assumed to be an intensity image, thus it won't undergo any R/L value swapping.
     :return: tensor of the same shape as label map, potentially right/left flipped with correction for sided labels.
     """
 
@@ -143,7 +160,13 @@ def label_map_random_flipping(labels, label_list, n_neutral_labels, aff, n_dims=
                                           KL.Lambda(lambda x: K.reverse(x, axes=flip_axis))(y[1]),
                                           y[1]))([rand_flip, labels])
 
-    return labels, rand_flip
+    if additional_tensor is None:
+        return labels
+    else:
+        additional_tensor = KL.Lambda(lambda y: K.switch(tf.squeeze(y[0]),
+                                                         KL.Lambda(lambda x: K.reverse(x, axes=flip_axis))(y[1]),
+                                                         y[1]))([rand_flip, additional_tensor])
+        return labels, additional_tensor
 
 
 def restrict_tensor(tensor, axes, boundaries):
@@ -212,6 +235,38 @@ def restrict_tensor(tensor, axes, boundaries):
     tensor = KL.multiply([tensor, mask])
 
     return tensor, mask
+
+
+def create_rigid_def_tensor(r, t, c):
+    """
+    This function creates a rigid deformation matrix from a 3D vector of rotations r, and 3D vector of translations t,
+    and a geometric center of ratation c (essentially the center of the cuboid / image domain)
+    """
+    Rx_row0 = tf.constant([1, 0, 0], shape=[1, 3], dtype='float32')
+    Rx_row1 = tf.stack([tf.zeros(1), tf.cos(r[tf.newaxis, 0]), -tf.sin(r[tf.newaxis, 0])], axis=1)
+    Rx_row2 = tf.stack([tf.zeros(1), tf.sin(r[tf.newaxis, 0]), tf.cos(r[tf.newaxis, 0])], axis=1)
+    Rx = tf.concat([Rx_row0, Rx_row1, Rx_row2], axis=0)
+
+    Ry_row0 = tf.stack([tf.cos(r[tf.newaxis, 1]), tf.zeros(1), tf.sin(r[tf.newaxis, 1])], axis=1)
+    Ry_row1 = tf.constant([0, 1, 0], shape=[1, 3], dtype='float32')
+    Ry_row2 = tf.stack([-tf.sin(r[tf.newaxis, 1]), tf.zeros(1), tf.cos(r[tf.newaxis, 1])], axis=1)
+    Ry = tf.concat([Ry_row0, Ry_row1, Ry_row2], axis=0)
+
+    Rz_row0 = tf.stack([tf.cos(r[tf.newaxis, 2]), -tf.sin(r[tf.newaxis, 2]), tf.zeros(1)], axis=1)
+    Rz_row1 = tf.stack([tf.sin(r[tf.newaxis, 2]), tf.cos(r[tf.newaxis, 2]), tf.zeros(1)], axis=1)
+    Rz_row2 = tf.constant([0, 0, 1], shape=[1, 3], dtype='float32')
+    Rz = tf.concat([Rz_row0, Rz_row1, Rz_row2], axis=0)
+
+    R = tf.matmul(tf.matmul(Rx, Ry), Rz)
+
+    t2 = t + c - tf.linalg.matvec(R, c)
+
+    T = tf.concat([tf.concat([R, t2[:, tf.newaxis]], axis=1),
+                   tf.constant([0, 0, 0, 1], shape=[1, 4], dtype='float32')], axis=0)
+
+    Tinv = tf.linalg.inv(T)
+
+    return [T[np.newaxis, :], Tinv[np.newaxis, :]]
 
 
 def build_rotation_matrix(theta, n_dims):

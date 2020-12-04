@@ -95,7 +95,7 @@ def training(image_dir,
     :param rotation_bounds: (optional) same as scaling bounds but for the rotation angle, except that for case 1 the
     bounds are centred on 0 rather than 1, i.e. (0+rotation_bounds[i], 0-rotation_bounds[i]).
     Default is rotation_bounds = 15.
-    :param shearing_bounds: (optional) same as scaling bounds. Default is shearing_bounds = 0.01.
+    :param shearing_bounds: (optional) same as scaling bounds. Default is shearing_bounds = 0.012.
     :param enable_90_rotations: (optional) wheter to additionally (i.e. additionally to rotation bound) rotate the input
      by a random angle chosen in {0, 90, 180, 270}.
     :param apply_nonlin_trans: (optional) whether to apply a random elastic deformation to the training data.
@@ -246,7 +246,7 @@ def training(image_dir,
 
 def train_model(model,
                 generator,
-                learn_rate,
+                learning_rate,
                 lr_decay,
                 n_epochs,
                 n_steps,
@@ -264,7 +264,7 @@ def train_model(model,
         callbacks.append(KC.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=True, write_images=False))
 
     # compile
-    model.compile(optimizer=Adam(lr=learn_rate, decay=lr_decay),
+    model.compile(optimizer=Adam(lr=learning_rate, decay=lr_decay),
                   loss=metrics_model.IdentityLoss().loss,
                   loss_weights=[1.0])
 

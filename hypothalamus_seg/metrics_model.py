@@ -74,44 +74,6 @@ def metrics_model(input_shape,
     return model
 
 
-def evaluation_model(input_shape, segmentation_label_list):
-    """model to compute hard dice scores from maps. Input shape designated width*height*depth*channels"""
-
-    # get deformed labels
-    labels_gt = KL.Input(shape=input_shape, name='gt_input')
-    labels_seg = KL.Input(shape=input_shape, name='seg_input')
-
-    # loop through all labels in label list
-    dice = KL.Lambda(lambda x: tf.zeros([0]), name='empty_dice')(labels_gt)
-    for label in segmentation_label_list:
-
-        # get hard segmentation
-        mask_gt = KL.Lambda(lambda x: tf.where(K.equal(x, label),
-                                               tf.ones_like(x, dtype='float32'),
-                                               tf.zeros_like(x, dtype='float32')),
-                            name='gt_mask_%s' % label)(labels_gt)
-        mask_seg = KL.Lambda(lambda x: tf.where(K.equal(x, label),
-                                                tf.ones_like(x, dtype='float32'),
-                                                tf.zeros_like(x, dtype='float32')),
-                             name='seg_mask_%s' % label)(labels_seg)
-
-        # compute dice
-        top = KL.Lambda(lambda x: 2 * x[0] * x[1], name='top%s' % label)([mask_gt, mask_seg])
-        bottom = KL.Lambda(lambda x: K.square(x[0]) + K.square(x[1]), name='bottom%s' % label)([mask_gt, mask_seg])
-        for dims_to_sum in range(len(input_shape)):
-            top = KL.Lambda(lambda x: K.sum(x, axis=1), name='top_sum_{0}_{1}'.format(label, dims_to_sum))(top)
-            bottom = KL.Lambda(lambda x: K.sum(x, axis=1), name='bottom_sum_{0}_{1}'.format(label, dims_to_sum))(bottom)
-        tmp_dice = KL.Lambda(lambda x: x[0] / K.maximum(x[1], 0.001), name='dice%s' % label)([top, bottom])  # 1d vector
-
-        # concat to other values
-        dice = KL.Lambda(lambda x: tf.concat(x, axis=0), name='cat_%s' % label)([dice, tmp_dice])
-    dice = KL.Lambda(lambda x: tf.expand_dims(x, 0), name='add_dim')(dice)
-
-    # create the model and return
-    model = Model(inputs=[labels_gt, labels_seg], outputs=dice)
-    return model
-
-
 class IdentityLoss(object):
     """Very simple loss, as the computation of the loss as been directly implemented in the model."""
     def __init__(self, keepdims=True):

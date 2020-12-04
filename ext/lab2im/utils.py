@@ -303,6 +303,8 @@ def reformat_to_list(var, length=None, load_as_numpy=False, dtype=None):
         var = np.squeeze(var).tolist()
     elif isinstance(var, str):
         var = [var]
+    elif isinstance(var, bool):
+        var = [var]
     if isinstance(var, list):
         if length is not None:
             if len(var) == 1:
@@ -554,13 +556,18 @@ def get_padding_margin(cropping, loss_cropping):
 # --------------------------------------------------- miscellaneous ----------------------------------------------------
 
 
-def infer(s):
-    ''' Try to parse input to float. If it fails, keep it as string '''
+def infer(x):
+    ''' Try to parse input to float. If it fails, tries boolean, and otherwise keep it as string '''
     try:
-        s = float(s)
+        x = float(x)
     except ValueError:
-        pass
-    return s
+        if x == 'False':
+            x = False
+        elif x == 'True':
+            x = True
+        elif not isinstance(x, str):
+            raise TypeError('input should be an int/float/boolean/str, had {}'.format(type(x)))
+    return x
 
 
 def print_loop_info(idx, n_iterations, spacing):

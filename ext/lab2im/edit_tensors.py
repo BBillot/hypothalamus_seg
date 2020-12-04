@@ -38,7 +38,7 @@ def get_std_blurring_mask_for_downsampling(downsample_res, current_res, thicknes
     :param downsample_res: resolution to downsample to. Can be a 1d numpy array or list, or a tensor.
     :param current_res: resolution of the volume before downsampling.
     Can be a 1d numpy array or list or tensor of the same length as downsample res.
-    :param thickness: slices thickness in each dimension.
+    :param thickness: (optional) slices thickness in each dimension.
     Can be a 1d numpy array or list of the same length as downsample res.
     :return: standard deviation of the blurring masks given as as the same type as downsample_res (list or tensor).
     """
@@ -89,48 +89,58 @@ def blur_tensor(tensor, list_kernels, n_dims=3):
     return tensor
 
 
-def get_gaussian_1d_kernels(sigma, blurring_range=None):
+def get_gaussian_1d_kernels(sigma, max_sigma=None, blurring_range=None):
     """This function builds a list of 1d gaussian blurring kernels.
     The produced tensors are designed to be used with tf.nn.convolution.
     The number of dimensions of the image to blur is assumed to be the length of sigma.
-    :param sigma: std deviation of the gaussian kernels to build. Must be a sequence of size n_dims
-    (excluding batch and channel dimensions)
-    :param blurring_range: if not None, this introduces a randomness in the blurring kernels,
+    :param sigma: std deviation of the gaussian kernels to build. Must be a sequence of size (n_dims,)
+    (excluding batch and channel dimensions). This can also be provided as a tensor (of size (n_dims,)) to be able to
+    use different values for sigma in a keras model.
+    :param max_sigma: (optional) maximum possible value for sigma (when it varies, e.g. when provided as a tensor).
+    This is used to compute the size of the returned kernels. It *must* be provided when sigma is a tensor, but is
+    optional otherwise. Must be a numpy array, of the same size as sigma.
+    :param blurring_range: (optional) if not None, this introduces a randomness in the blurring kernels,
     where sigma is now multiplied by a coefficient dynamically sampled from a uniform distribution with bounds
     [1/blurring_range, blurring_range].
     :return: a list of 1d blurring kernels
     """
 
-    sigma = utils.reformat_to_list(sigma)
-    n_dims = len(sigma)
+    # convert sigma into a tensor
+    if not tf.is_tensor(sigma):
+        sigma_tens = KL.Lambda(lambda x: tf.convert_to_tensor(utils.reformat_to_list(sigma), dtype='float32'))([])
+    else:
+        assert max_sigma is not None, 'max_sigma must be provided when sigma is given as a tensor'
+        sigma_tens = sigma
+    n_dims = sigma_tens.get_shape().as_list()[0]
+    list_sigma = KL.Lambda(lambda x: tf.split(x, [1] * n_dims, axis=0))(sigma_tens)
+
+    # reset blurring range to 1
+    if blurring_range is None:
+        blurring_range = 1.
+
+    # reformat sigma and get size of blurring kernels
+    if max_sigma is None:
+        max_sigma = np.array(sigma) * blurring_range  # np.array(sigma) is defined as sigma is not a tensor in this case
+    else:
+        max_sigma = np.array(utils.reformat_to_list(max_sigma, length=n_dims))
+    size = np.int32(np.ceil(2.5 * max_sigma) / 2)
 
     kernels_list = list()
     for i in range(n_dims):
 
-        if (sigma[i] is None) or (sigma[i] == 0):
-            kernels_list.append(None)
+        # build 1d kernel
+        random_coef = KL.Lambda(lambda x: tf.random.uniform((1,), 1 / blurring_range, blurring_range))([])
+        kernel = KL.Lambda(lambda x: tfp.distributions.Normal(0., x[0] * x[1]).prob(tf.range(start=-size[i],
+                           limit=size[i] + 1, dtype=tf.float32)))([random_coef, list_sigma[i]])
+        kernel = KL.Lambda(lambda x: x / tf.reduce_sum(x))(kernel)
 
-        else:
-            # build kernel
-            if blurring_range is not None:
-                random_coef = KL.Lambda(lambda x: tf.random.uniform((1,), 1 / blurring_range, blurring_range))([])
-                size = np.int32(np.ceil(2.5 * blurring_range * sigma[i]) / 2)
-                kernel = KL.Lambda(lambda x: tfp.distributions.Normal(0., x*sigma[i]).prob(tf.range(start=-size,
-                                   limit=size + 1, dtype=tf.float32)))(random_coef)
-            else:
-                size = np.int32(np.ceil(2.5 * sigma[i]) / 2)
-                kernel = KL.Lambda(lambda x: tfp.distributions.Normal(0., sigma[i]).prob(tf.range(start=-size,
-                                   limit=size + 1, dtype=tf.float32)))([])
-            kernel = KL.Lambda(lambda x: x / tf.reduce_sum(x))(kernel)
-
-            # add dimensions
-            for j in range(n_dims):
-                if j < i:
-                    kernel = KL.Lambda(lambda x: tf.expand_dims(x, 0))(kernel)
-                elif j > i:
-                    kernel = KL.Lambda(lambda x: tf.expand_dims(x, -1))(kernel)
-            kernel = KL.Lambda(lambda x: tf.expand_dims(tf.expand_dims(x, -1), -1))(kernel)  # for tf.nn.convolution
-            kernels_list.append(kernel)
+        # add dimensions
+        for j in range(n_dims):
+            if j < i:
+                kernel = KL.Lambda(lambda x: tf.expand_dims(x, 0))(kernel)
+            elif j > i:
+                kernel = KL.Lambda(lambda x: tf.expand_dims(x, -1))(kernel)
+        kernels_list.append(KL.Lambda(lambda x: tf.expand_dims(tf.expand_dims(x, -1), -1))(kernel))
 
     return kernels_list
 
@@ -177,7 +187,7 @@ def blur_channel(tensor, mask, kernels_list, n_dims, blur_background=True):
     :param mask: mask of non-background regions in the input tensor
     :param kernels_list: list of blurring 1d kernels
     :param n_dims: number of dimensions of the initial image (excluding batch and channel dimensions)
-    :param blur_background: whether to correct for edge-blurring effects
+    :param blur_background: (optional) whether to correct for edge-blurring effects
     :return: blurred tensor with background augmentation
     """
 
@@ -223,38 +233,40 @@ def resample_tensor(tensor,
                     resample_shape,
                     interp_method='linear',
                     subsample_res=None,
-                    volume_res=None):
+                    volume_res=None,
+                    build_reliability_map=False):
     """This function resamples a volume to resample_shape. It does not apply any pre-filtering.
     A prior downsampling step can be added if subsample_res is specified. In this case, volume_res should also be
-    specified, in order to calculate the downsampling ratio.
+    specified, in order to calculate the downsampling ratio. A reliability map can also be returned to indicate which
+    slices were interpolated during resampling from the downsampled to final tensor.
     :param tensor: tensor
-    :param resample_shape: shape to resample the input tensor to. This can be a list or numpy array of size (n_dims,),
-    where n_dims excludes the batchsize and channels dimensions.
-    :param interp_method: interpolation method for resampling, 'linear' or 'nearest'
-    :param subsample_res: if not None, this triggers a downsampling of the volume, prior to the resampling step.
-    list or numpy array of size (n_dims,).
-    :param volume_res: if subsample_res is not None, this should be provided to compute downsampling ratio.
-     list or numpy array of size (n_dims,).
-    :return: resampled volume
+    :param resample_shape: list or numpy array of size (n_dims,)
+    :param interp_method: (optional) interpolation method for resampling, 'linear' (default) or 'nearest'
+    :param subsample_res: (optional) if not None, this triggers a downsampling of the volume, prior to the resampling
+    step. List or numpy array of size (n_dims,). Default si None.
+    :param volume_res: (optional) if subsample_res is not None, this should be provided to compute downsampling ratio.
+    list or numpy array of size (n_dims,). Default is None.
+    :param build_reliability_map: whether to return reliability map along with the resampled tensor. This map indicates
+    which slices of the resampled tensor are interpolated (0=interpolated, 1=real slice, in between=degree of realness).
+    :return: resampled volume, with reliability map if necessary.
     """
 
     # reformat resolutions to lists
     subsample_res = utils.reformat_to_list(subsample_res)
     volume_res = utils.reformat_to_list(volume_res)
+    n_dims = len(resample_shape)
+
+    # downsample image
+    tensor_shape = tensor.get_shape().as_list()[1:-1]
+    downsample_shape = tensor_shape  # will be modified if we actually downsample
+
     if subsample_res is not None:
         assert volume_res is not None, 'volume_res must be given when providing a subsampling resolution.'
         assert len(subsample_res) == len(volume_res), 'subsample_res and volume_res must have the same length, ' \
                                                       'had {0}, and {1}'.format(len(subsample_res), len(volume_res))
-    n_dims = len(resample_shape)
-
-    # downsample image
-    downsample_shape = None
-    tensor_shape = tensor.get_shape().as_list()[1:-1]
-    if subsample_res is not None:
         if subsample_res != volume_res:
 
             # get shape at which we downsample
-            assert volume_res is not None, 'if subsanple_res is specified, so should atlas_res be.'
             downsample_shape = [int(tensor_shape[i] * volume_res[i] / subsample_res[i]) for i in range(n_dims)]
 
             # downsample volume
@@ -262,11 +274,41 @@ def resample_tensor(tensor,
             tensor = nrn_layers.Resize(size=downsample_shape, interp_method='nearest')(tensor)
 
     # resample image at target resolution
-    if resample_shape != downsample_shape:
+    if resample_shape != downsample_shape:  # if we didn't dowmsample downsample_shape = tensor_shape
         tensor._keras_shape = tuple(tensor.get_shape().as_list())
         tensor = nrn_layers.Resize(size=resample_shape, interp_method=interp_method)(tensor)
 
-    return tensor
+    # compute reliability maps if necessary and return results
+    if build_reliability_map:
+
+        # compute maps only if we downsampled
+        if downsample_shape != tensor_shape:
+
+            # compute upsampling factors
+            upsampling_factors = np.array(resample_shape) / np.array(downsample_shape)
+
+            # build reliability map
+            reliability_map = 1
+            for i in range(n_dims):
+                loc_float = np.arange(0, resample_shape[i], upsampling_factors[i])
+                loc_floor = np.int32(np.floor(loc_float))
+                loc_ceil = np.int32(np.clip(loc_floor + 1, 0, resample_shape[i] - 1))
+                tmp_reliability_map = np.zeros(resample_shape[i])
+                tmp_reliability_map[loc_floor] = 1 - (loc_float - loc_floor)
+                tmp_reliability_map[loc_ceil] = tmp_reliability_map[loc_ceil] + (loc_float - loc_floor)
+                shape = [1, 1, 1]
+                shape[i] = resample_shape[i]
+                reliability_map = reliability_map * np.reshape(tmp_reliability_map, shape)
+            mask = KL.Lambda(lambda x: tf.constant(reliability_map, shape=[1, *resample_shape, 1], dtype='float32'))([])
+
+        # otherwise just return an all-one tensor
+        else:
+            mask = KL.Lambda(lambda x: tf.ones_like(x))(tensor)
+
+        return tensor, mask
+
+    else:
+        return tensor
 
 
 # ------------------------------------------------ convert label values ------------------------------------------------
@@ -292,12 +334,12 @@ def reset_label_values_to_zero(label_map, labels_to_reset):
 
 # ---------------------------------------------------- pad tensors -----------------------------------------------------
 
-def pad_tensor(tensor, padding_shape=None, pad_value=0):
+def pad_tensor(tensor, padding_shape, pad_value=0):
     """Pad tensor, around its centre, to specified shape.
     :param tensor: tensor to pad
     :param padding_shape: shape of the returned padded tensor. Can be a list or a numy 1d array, of the same length as
     the numbe of dimensions of the tensor (including batch and channel dimensions).
-    :param pad_value: value by which to pad the tensor. Default is 0.
+    :param pad_value: (optional) value by which to pad the tensor. Default is 0.
     """
 
     # get shapes and padding margins

@@ -88,12 +88,12 @@ def lab2im_model(labels_shape,
     labels = convert_labels(labels_input, lut)
 
     # deform labels
-    labels = deform_tensor(labels, affine_trans=aff_in, interp_method='nearest')
+    labels = deform_tensor(labels, affine_trans=aff_in, inter_method='nearest')
     labels = KL.Lambda(lambda x: tf.cast(x, dtype='int32'))(labels)
 
     # cropping
     if crop_shape != labels_shape:
-        labels, _ = random_cropping(labels, crop_shape, n_dims)
+        labels = random_cropping(labels, crop_shape, n_dims)
 
     # build synthetic image
     image = sample_gmm_conditioned_on_labels(labels, means_input, std_devs_input, n_generation_labels, n_channels)
@@ -113,7 +113,8 @@ def lab2im_model(labels_shape,
         channel = blur_channel(channel, mask, kernels_list, n_dims, blur_background)
 
         # resample channel
-        channel = resample_tensor(channel, output_shape, 'linear')
+        if crop_shape != output_shape:
+            channel = resample_tensor(channel, output_shape, 'linear')
 
         # apply bias field
         channel = bias_field_augmentation(channel, bias_shape_factor=.025, bias_field_std=.3)
