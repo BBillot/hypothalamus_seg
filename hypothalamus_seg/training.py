@@ -38,6 +38,7 @@ def training(image_dir,
              bias_field_std=.3,
              bias_shape_factor=.025,
              augment_intensitites=True,
+             noise_std=1.,
              augment_channels_separately=True,
              n_levels=5,
              nb_conv_per_level=2,
@@ -114,6 +115,9 @@ def training(image_dir,
     :param bias_shape_factor: (optional) Ratio between the size of the input label maps and the size of the sampled
     tensor for synthesising the bias field.
     :param augment_intensitites: (optional) whether to augment the intensities of the images with gamma augmentation.
+    :param noise_std: (optional) if augment_intensities is true, maximum value for the standard deviation of the normal
+    distribution from which we sample a Gaussian white noise. Set to 0 to deactivate white noise augmentation.
+    Default value is 1.
     :param augment_channels_separately: (optional) whether to augment the intensities of each channel indenpendently.
     Only applied if augment_intensity is True, and the training images have several channels. Default is True.
 
@@ -188,6 +192,7 @@ def training(image_dir,
                                                   bias_field_std=bias_field_std,
                                                   bias_shape_factor=bias_shape_factor,
                                                   apply_intensity_augmentation=augment_intensitites,
+                                                  noise_std=noise_std,
                                                   augment_channels_separately=augment_channels_separately)
     unet_input_shape = augmentation_model.output[0].get_shape().as_list()[1:]
 

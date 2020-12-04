@@ -46,6 +46,13 @@ def bias_field_augmentation(tensor, bias_field_std=.3, bias_shape_factor=.025):
     return KL.multiply([bias_field, tensor])
 
 
+def add_gaussian_noise(tensor, std):
+
+    noise_std = KL.Lambda(lambda x: tf.random.uniform((1, 1), maxval=std))([])
+    noise = KL.Lambda(lambda x: tf.random.normal(tf.shape(x[0]), stddev=x[1]))([tensor, noise_std])
+    return KL.add([noise, tensor])
+
+
 def min_max_normalisation(tensor):
     """Normalise tensor between 0 and 1"""
     m = KL.Lambda(lambda x: K.min(x))(tensor)

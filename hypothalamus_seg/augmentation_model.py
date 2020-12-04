@@ -32,6 +32,7 @@ def build_augmentation_model(im_shape,
                              bias_field_std=.3,
                              bias_shape_factor=0.025,
                              apply_intensity_augmentation=True,
+                             noise_std=1.,
                              augment_channels_separately=True):
 
     # reformat resolutions
@@ -131,6 +132,10 @@ def build_augmentation_model(im_shape,
 
     # intensity augmentation
     if apply_intensity_augmentation:
+
+        # add Gaussian white noise
+        if noise_std:
+            image = l2i_ia.add_gaussian_noise(image, std=noise_std)
 
         if (not augment_channels_separately) | (n_channels == 1):
             image = l2i_ia.min_max_normalisation(image)

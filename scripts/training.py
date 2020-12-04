@@ -44,6 +44,7 @@ parser.add_argument("--bias_shape_factor", type=float, default=.025, dest="bias_
                     help="ratio between the size of the image and the sampled bias field")
 parser.add_argument("--no_intensity_augmentation", action='store_false', dest="augment_intensitites",
                     help="deactivate intensity augmentation")
+parser.add_argument("--noise_std", type=float, default=1., dest="noise_std", help="std dev. of the gaussian noise")
 parser.add_argument("--augment_channels_together", action='store_false', dest="augment_channels_separately",
                     help="augment intensities of all channels together rather than separately.")
 
