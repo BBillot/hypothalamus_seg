@@ -27,8 +27,6 @@ from pprint import pformat
 from ext.pytools import timer
 from ext.pytools import patchlib as pl
 
-# local imports
-
 # often changed file
 from imp import reload
 import keras

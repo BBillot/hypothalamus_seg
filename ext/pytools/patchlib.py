@@ -21,8 +21,6 @@ from imp import reload
 reload(nd)
 
 
-
-
 def quilt(patches,
           patch_size,
           grid_size,
