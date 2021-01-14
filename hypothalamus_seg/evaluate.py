@@ -19,11 +19,17 @@ def fast_dice(x, y, labels):
 
     assert x.shape == y.shape, 'both inputs should have same size, had {} and {}'.format(x.shape, y.shape)
 
-    label_edges = np.concatenate([labels[0:1] - 0.5, labels + 0.5])
-    hst = np.histogram2d(x.flatten(), y.flatten(), bins=label_edges)
-    c = hst[0]
+    if len(labels) > 1:
+        label_edges = np.concatenate([labels[0:1] - 0.5, labels + 0.5])
+        hst = np.histogram2d(x.flatten(), y.flatten(), bins=label_edges)
+        c = hst[0]
+        dice_score = np.diag(c) * 2 / (np.sum(c, 0) + np.sum(c, 1) + 1e-5)
+    else:
+        x = (x == labels[0]) * 1
+        y = (y == labels[0]) * 1
+        dice_score = 2 * np.sum(x * y) / (np.sum(x) + np.sum(y))
 
-    return np.diag(c) * 2 / (np.sum(c, 0) + np.sum(c, 1) + 1e-5)
+    return dice_score
 
 
 def dice(x, y):

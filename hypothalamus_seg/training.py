@@ -112,7 +112,7 @@ def training(image_dir,
     to all channels or not.
     :param augment_intensitites: (optional) whether to augment the intensities of the images with gamma augmentation.
     :param noise_std: (optional) if augment_intensities is true, maximum value for the standard deviation of the normal
-    distribution from which we sample a Gaussian white noise. Set to 0 to deactivate white noise augmentation.
+    distribution from which we sample a Gaussian white noise. Set to False to deactivate white noise augmentation.
     Default value is 1.
     :param augment_channels_separately: (optional) whether to augment the intensities of each channel indenpendently.
     Only applied if augment_intensity is True, and the training images have several channels. Default is True.
@@ -218,26 +218,19 @@ def training(image_dir,
     # pre-training with weighted L2, input is fit to the softmax rather than the probabilities
     if wl2_epochs > 0:
         wl2_model = Model(unet_model.inputs, [unet_model.get_layer('unet_likelihood').output])
-        wl2_model = metrics_model.metrics_model(input_shape=unet_input_shape[:-1] + [n_labels],
-                                                input_model=wl2_model,
-                                                metrics='wl2',
-                                                name='metrics_model')
+        wl2_model = metrics_model.metrics_model(input_model=wl2_model, metrics='wl2')
         if load_model_file is not None:
-            print('loading', load_model_file)
             wl2_model.load_weights(load_model_file)
         train_model(wl2_model, training_generator, lr, lr_decay, wl2_epochs, steps_per_epoch, model_dir, log_dir,
                     'wl2', initial_epoch_wl2)
 
     # fine-tuning with dice metric
     if dice_epochs > 0:
-        dice_model = metrics_model.metrics_model(input_shape=unet_input_shape[:-1] + [n_labels],
-                                                 input_model=unet_model,
-                                                 name='metrics_model')
+        dice_model = metrics_model.metrics_model(input_model=unet_model)
         if wl2_epochs > 0:
             last_wl2_model_name = os.path.join(model_dir, 'wl2_%03d.h5' % wl2_epochs)
             dice_model.load_weights(last_wl2_model_name, by_name=True)
         elif load_model_file is not None:
-            print('loading', load_model_file)
             dice_model.load_weights(load_model_file)
         train_model(dice_model, training_generator, lr, lr_decay, dice_epochs, steps_per_epoch, model_dir, log_dir,
                     'dice', initial_epoch_dice)
