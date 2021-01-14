@@ -2,15 +2,13 @@
 import numpy as np
 import tensorflow as tf
 import keras.layers as KL
-import keras.backend as K
 from keras.models import Model
-from sklearn import preprocessing
 
 # third-party imports
 from ext.lab2im import utils
+from ext.lab2im import edit_volumes
+from ext.lab2im import layers as l2i_layers
 from ext.lab2im import edit_tensors as l2i_et
-from ext.lab2im import spatial_augmentation as l2i_sp
-from ext.lab2im import intensity_augmentation as l2i_ia
 
 
 def build_augmentation_model(im_shape,
@@ -22,7 +20,7 @@ def build_augmentation_model(im_shape,
                              output_div_by_n=None,
                              n_neutral_labels=1,
                              flipping=True,
-                             apply_flip_rl_only=False,
+                             flip_rl_only=False,
                              aff=None,
                              scaling_bounds=0.15,
                              rotation_bounds=15,
@@ -64,39 +62,17 @@ def build_augmentation_model(im_shape,
 
     # flipping
     if flipping:
-        # boolean tensor to decide whether to flip
-        rand_flip = KL.Lambda(lambda x: K.greater(tf.random.uniform((1, 1), 0, 1), 0.5), name='bool_flip')([])
-        if apply_flip_rl_only:
-            # flip right and left labels if we right-left flip the image
-            rl_split = np.split(label_list, [n_neutral_labels, n_neutral_labels + int((n_labels-n_neutral_labels)/2)])
-            flipped_lut = np.concatenate((rl_split[0], rl_split[2], rl_split[1]))
-            labels = KL.Lambda(lambda y: K.switch(tf.squeeze(y[0]),
-                                                  KL.Lambda(lambda x: tf.gather(
-                                                      tf.convert_to_tensor(flipped_lut, dtype='int32'),
-                                                      tf.cast(x, dtype='int32')), name='change_rl_lab')(y[1]),
-                                                  tf.cast(y[1], dtype='int32')),
-                               name='switch_idx_flipping')([rand_flip, labels])
-            # find right left axis
-            norm_vox2ras = np.absolute(preprocessing.normalize(aff[0:n_dims, 0:n_dims], axis=0))
-            flip_axis_array = [np.argmax(norm_vox2ras[0, :]) + 1]  # add 1 because of batch dimension
-            flip_axis = KL.Lambda(lambda x: tf.convert_to_tensor(flip_axis_array, dtype='int32'))([])
+        if flip_rl_only:
+            labels, image = l2i_layers.RandomFlip(int(edit_volumes.get_ras_axes(aff, n_dims)[0]),
+                                                  [True, False], label_list, n_neutral_labels)([labels, image_in])
         else:
-            # randomly chose an axis to flip
-            flip_axis = KL.Lambda(lambda x: tf.random.uniform([1], 1, n_dims+1, dtype='int32'), name='flip_axis')([])
-        # transform labels to soft prob.
-        split_labels = KL.Lambda(lambda x: tf.one_hot(tf.cast(x, dtype='int32'), depth=n_labels, axis=-1))(labels)
-        # concatenate image and labels
-        concatenated = KL.concatenate([image_in, split_labels], axis=len(im_shape), name='inputs_cat')
-        # flip
-        image = KL.Lambda(lambda y: K.switch(tf.squeeze(y[0]),
-                                             KL.Lambda(lambda x: K.reverse(x[0], axes=tf.cast(x[1], dtype='int32')),
-                                                       name='flip')([y[1], y[2]]),
-                                             y[1]), name='switch_im_flipping')([rand_flip, concatenated, flip_axis])
+            labels, image = l2i_layers.RandomFlip(None, [True, False], label_list, n_neutral_labels)([labels, image_in])
     else:
-        # transform labels to soft prob.
-        split_labels = KL.Lambda(lambda x: tf.one_hot(tf.cast(x, dtype='int32'), depth=n_labels, axis=-1))(labels)
-        # concatenate image and labels
-        image = KL.concatenate([image_in, split_labels], axis=len(im_shape), name='inputs_cat')
+        image = image_in
+
+    # transform labels to soft prob. and concatenate them to the image
+    labels = KL.Lambda(lambda x: tf.one_hot(tf.cast(x[..., 0], dtype='int32'), depth=n_labels, axis=-1))(labels)
+    image = KL.concatenate([image, labels], axis=len(im_shape))
 
     # spatial deformation
     if (scaling_bounds is not False) | (rotation_bounds is not False) | (shearing_bounds is not False) | \
@@ -112,7 +88,8 @@ def build_augmentation_model(im_shape,
 
     # cropping
     if cropping_shape != im_shape[:-1]:
-        image = l2i_sp.random_cropping(image, cropping_shape, n_dims)
+        image._keras_shape = tuple(image.get_shape().as_list())
+        image = l2i_layers.RandomCrop(cropping_shape)(image)
 
     # resample image to new resolution if necessary
     if cropping_shape != output_shape:
@@ -138,30 +115,9 @@ def build_augmentation_model(im_shape,
 
     # intensity augmentation
     if apply_intensity_augmentation:
-
-        # add Gaussian white noise
-        if noise_std:
-            image = l2i_ia.add_gaussian_noise(image, std=noise_std)
-
-        if (not augment_channels_separately) | (n_channels == 1):
-            image = l2i_ia.min_max_normalisation(image)
-            image = l2i_ia.gamma_augmentation(image, std=0.5)
-
-        else:
-            # split channels
-            if n_channels > 1:
-                split = KL.Lambda(lambda x: tf.split(x, [1] * n_channels, axis=-1))(image)
-            else:
-                split = [image]
-            intensity_augmented_channels = list()
-            for i, channel in enumerate(split):
-                channel = l2i_ia.min_max_normalisation(channel)
-                intensity_augmented_channels.append(l2i_ia.gamma_augmentation(channel, std=0.5))
-            # concatenate all channels back
-            if n_channels > 1:
-                image = KL.concatenate(intensity_augmented_channels)
-            else:
-                image = intensity_augmented_channels[0]
+        image._keras_shape = tuple(image.get_shape().as_list())
+        image = l2i_layers.IntensityAugmentation(noise_std, clip=False, normalise=True, norm_perc=0, gamma_std=0.5,
+                                                 separate_channels=augment_channels_separately)(image)
 
     # build model
     im_trans_model = Model(inputs=[image_in, labels_in], outputs=[image, labels])
