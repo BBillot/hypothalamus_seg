@@ -91,18 +91,14 @@ def build_augmentation_model(im_shape,
         image._keras_shape = tuple(image.get_shape().as_list())
         image = l2i_layers.RandomCrop(cropping_shape)(image)
 
-    # resample image to new resolution if necessary
+    # resampling (image blurred separately)
     if cropping_shape != output_shape:
-        # separate image channels from labels channels
-        split = KL.Lambda(lambda x: tf.split(x, [1]*n_channels + [-1], axis=len(im_shape)))(image)
-        # blur each image channel separately
-        sigma = utils.get_std_blurring_mask_for_downsampling(target_res, image_res)
-        kernels_list = l2i_et.get_gaussian_1d_kernels(sigma)
-        blurred_channels = list()
-        for i in range(n_channels):
-            blurred_channels.append(l2i_et.blur_tensor(split[i], kernels_list, n_dims=n_dims))
-        image = KL.concatenate(blurred_channels + [split[-1]])
-        # resample image at target resolution
+        sigma = l2i_et.blurring_sigma_for_downsampling(image_res, target_res)
+        split = KL.Lambda(lambda x: tf.split(x, [n_channels, -1], axis=len(im_shape)))(image)
+        image = split[0]
+        image._keras_shape = tuple(image.get_shape().as_list())
+        image = l2i_layers.GaussianBlur(sigma=sigma)(image)
+        image = KL.concatenate([image, split[-1]])
         image = l2i_et.resample_tensor(image, output_shape)
 
     # split tensor between image and labels
