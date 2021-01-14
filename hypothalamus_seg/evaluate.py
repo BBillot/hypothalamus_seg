@@ -133,7 +133,8 @@ def cohens_d(volumes_x, volumes_y):
 def reproducibility_test(gt_dir,
                          seg_dir,
                          result_dir,
-                         label_list):
+                         label_list,
+                         verbose=True):
 
     """This function computes evaluation metrics (hard dice scores, average boundary distance, Hausdorff distance) 
     between two sets of labels maps in gt_dir (ground truth) and seg_dir (typically predictions).
@@ -144,6 +145,7 @@ def reproducibility_test(gt_dir,
     :param result_dir: path of directory where result matrices will be saved.
     :param label_list: list of label values for which to compute evaluation metrics. Can be a sequence, a 1d numpy
     array, or the path to such array.
+    :param verbose: (optional) whether to print out info about the remaining number of cases.
     :return: 3 matrices, each containing the results of one metric for all images.
     Rows of these matrices correspond to a different label value (in same order as in path_label_list), and each column
     represent a different subject (in hte same order as gt_dir). An additional row is added to every matrix,
@@ -170,7 +172,8 @@ def reproducibility_test(gt_dir,
 
     # loop over segmentations
     for idx, (path_seg, path_gt) in enumerate(zip(path_segs, path_gt_labels)):
-        utils.print_loop_info(idx, len(path_segs), 10)
+        if verbose:
+            utils.print_loop_info(idx, len(path_segs), 10)
 
         # load gt labels and segmentation
         gt_labels = utils.load_volume(path_gt, dtype='int')

@@ -21,10 +21,9 @@ from ext.neuron import models as nrn_models
 def predict(path_images,
             path_segmentations,
             path_model='../data/model.h5',
-            segmentation_labels=None,
+            segmentation_label_list=None,
             path_posteriors=None,
             path_volumes=None,
-            skip_background_volume=True,
             padding=None,
             cropping=None,
             resample=None,
@@ -36,7 +35,51 @@ def predict(path_images,
             unet_feat_count=24,
             feat_multiplier=2,
             activation='elu',
-            gt_folder=None):
+            gt_folder=None,
+            evaluation_label_list=None,
+            verbose=True):
+    """
+    This function uses trained models to segment images.
+    It is crucial that the inputs match the architecture parameters of the trained model.
+    :param path_images: path of the images to segment. Can be the path to a directory or the path to a single image.
+    :param path_model: path ot the trained model.
+    :param segmentation_label_list: List of labels for which to compute Dice scores. It should contain the same values
+    as the segmentation label list used for training the network.
+    Can be a sequence, a 1d numpy array, or the path to a numpy 1d array.
+    :param path_segmentations: (optional) path where segmentations will be writen.
+    Should be a dir, if path_images is a dir, and afile if path_images is a file.
+    Should not be None, if path_posteriors is None.
+    :param path_posteriors: (optional) path where posteriors will be writen.
+    Should be a dir, if path_images is a dir, and afile if path_images is a file.
+    Should not be None, if path_segmentations is None.
+    :param path_volumes: (optional) path of a csv file where the soft volumes of all segmented regions will be writen.
+    The rows of the csv file correspond to subjects, and the columns correspond to segmentation labels.
+    The soft volume of a structure corresponds to the sum of its predicted probability map.
+    :param padding: (optional) crop the images to the specified shape before predicting the segmentation maps.
+    If padding and cropping are specified, images are padded before being cropped.
+    Can be an int, a sequence or a 1d numpy array.
+    :param cropping: (optional) crop the images to the specified shape before predicting the segmentation maps.
+    If padding and cropping are specified, images are padded before being cropped.
+    Can be an int, a sequence or a 1d numpy array.
+    :param resample: (optional) resample the images to the specified resolution before predicting the segmentation maps.
+    Can be an int, a sequence or a 1d numpy array.
+    :param sigma_smoothing: (optional) If not None, the posteriors are smoothed with a gaussian kernel of the specified
+    standard deviation.
+    :param keep_biggest_component: (optional) whether to only keep the biggest component in the predicted segmentation.
+    :param conv_size: (optional) size of unet's convolution masks. Default is 3.
+    :param n_levels: (optional) number of levels for unet. Default is 5.
+    :param nb_conv_per_level: (optional) number of convolution layers per level. Default is 2.
+    :param unet_feat_count: (optional) number of features for the first layer of the unet. Default is 24.
+    :param feat_multiplier: (optional) multiplicative factor for the number of feature for each new level. Default is 2.
+    :param activation: (optional) activation function. Can be 'elu', 'relu'.
+    :param gt_folder: (optional) folder containing ground truth files for evaluation.
+    A numpy array containing all dice scores (labels in rows, subjects in columns) will be writen either at
+    segmentations_dir (if not None), or posteriors_dir.
+    :param evaluation_label_list: (optional) if gt_folder is True you can evaluate the Dice scores on a subset of the
+    segmentation labels, by providing another label list here. Can be a sequence, a 1d numpy array, or the path to a
+    numpy 1d array. Default is the same as segmentation_label_list.
+    :param verbose: (optional) whether to print out info about the remaining number of cases.
+    """
 
     assert path_model, "A model file is necessary"
     assert path_segmentations or path_posteriors, "output segmentation (or posteriors) is required"
@@ -48,17 +91,16 @@ def predict(path_images,
                                                                                                 path_volumes)
 
     # get label and classes lists
-    if segmentation_labels is None:
+    if segmentation_label_list is None:
         label_list = np.arange(11)
     else:
-        label_list = utils.get_list_labels(label_list=segmentation_labels)
+        label_list = utils.get_list_labels(label_list=segmentation_label_list)
+    if evaluation_label_list is None:
+        evaluation_label_list = label_list
 
     # prepare volume file if needed
     if path_volumes is not None:
-        if skip_background_volume:
-            csv_header = [['subject'] + [str(lab) for lab in label_list[1:]] + ['whole_left'] + ['whole_right']]
-        else:
-            csv_header = [['subject'] + [str(lab) for lab in label_list] + ['whole_left'] + ['whole_right']]
+        csv_header = [['subject'] + [str(lab) for lab in label_list[1:]] + ['whole_left'] + ['whole_right']]
         with open(path_volumes, 'w') as csvFile:
             writer = csv.writer(csvFile)
             writer.writerows(csv_header)
@@ -70,13 +112,12 @@ def predict(path_images,
     for idx, (path_image, path_segmentation, path_posterior) in enumerate(zip(images_to_segment,
                                                                               path_segmentations,
                                                                               path_posteriors)):
-        utils.print_loop_info(idx, len(images_to_segment), 10)
+        if verbose:
+            utils.print_loop_info(idx, len(images_to_segment), 10)
 
         # preprocess image and get information
-        image, aff, h, im_res, n_channels, n_dims, shape, pad_shape, cropping, crop_idx = preprocess_image(path_image,
-                                                                                                           n_levels,
-                                                                                                           cropping,
-                                                                                                           padding)
+        image, aff, h, im_res, n_channels, n_dims, shape, pad_shape, cropping, crop_idx = \
+            preprocess_image(path_image, n_levels, cropping, padding)
         model_input_shape = list(image.shape[1:])
 
         # prepare net for first image or if input's size has changed
@@ -100,10 +141,7 @@ def predict(path_images,
 
         # compute volumes
         if path_volumes is not None:
-            if skip_background_volume:
-                volumes = np.sum(posteriors[..., 1:], axis=tuple(range(0, len(posteriors.shape) - 1)))
-            else:
-                volumes = np.sum(posteriors, axis=tuple(range(0, len(posteriors.shape) - 1)))
+            volumes = np.sum(posteriors[..., 1:], axis=tuple(range(0, len(posteriors.shape) - 1)))
             volumes = np.around(volumes * np.prod(im_res), 3)
             row = [os.path.basename(path_image).replace('.nii.gz', '')] + [str(vol) for vol in volumes]
             row += [np.sum(volumes[:int(len(volumes) / 2)]), np.sum(volumes[int(len(volumes) / 2):])]
@@ -129,7 +167,7 @@ def predict(path_images,
             eval_folder = os.path.dirname(path_segmentations[0])
         else:
             eval_folder = os.path.dirname(path_posteriors[0])
-        reproducibility_test(gt_folder, eval_folder, eval_folder, label_list)
+        reproducibility_test(gt_folder, eval_folder, eval_folder, evaluation_label_list, verbose=verbose)
 
 
 def prepare_output_files(path_images, out_seg, out_posteriors, out_volumes):
@@ -257,7 +295,7 @@ def preprocess_image(im_path, n_levels, crop_shape=None, padding=None):
     if n_channels > 1:
         im = utils.add_axis(im)
     else:
-        im = utils.add_axis(im, -2)
+        im = utils.add_axis(im, axis=[0, -1])
 
     return im, aff, header, im_res, n_channels, n_dims, shape, pad_shape, crop_shape, crop_idx
 

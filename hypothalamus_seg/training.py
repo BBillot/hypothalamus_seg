@@ -144,16 +144,8 @@ def training(image_dir,
         'either wl2_epochs or dice_epochs must be positive, had {0} and {1}'.format(wl2_epochs, dice_epochs)
 
     # prepare data files
-    if ('.nii.gz' in image_dir) | ('.nii' in image_dir) | ('.mgz' in image_dir) | ('.npz' in image_dir):
-        assert os.path.isfile(image_dir), 'no such file: %s' % image_dir
-        path_images = [image_dir]
-    else:
-        path_images = utils.list_images_in_folder(image_dir)
-    if ('.nii.gz' in labels_dir) | ('.nii' in labels_dir) | ('.mgz' in labels_dir) | ('.npz' in labels_dir):
-        assert os.path.isfile(labels_dir), 'no such file: %s' % labels_dir
-        path_label_maps = [labels_dir]
-    else:
-        path_label_maps = utils.list_images_in_folder(labels_dir)
+    path_images = utils.list_images_in_folder(image_dir)
+    path_label_maps = utils.list_images_in_folder(labels_dir)
     assert len(path_images) == len(path_label_maps), 'not the same number of training images and label maps.'
 
     # read info from image and get label list
