@@ -33,9 +33,9 @@ def training(image_dir,
              translation_bounds=False,
              nonlin_std=3.,
              nonlin_shape_factor=.04,
-             apply_bias_field=True,
              bias_field_std=.3,
              bias_shape_factor=.025,
+             same_bias_for_all_channels=False,
              augment_intensitites=True,
              noise_std=1.,
              augment_channels_separately=True,
@@ -102,13 +102,14 @@ def training(image_dir,
     distribution from which we sample the first tensor for synthesising the deformation field.
     :param nonlin_shape_factor: (optional) ratio between the size of the input label maps and the size of the sampled
     tensor for synthesising the elastic deformation field.
-    :param apply_bias_field: (optional) whether to apply a random bias field to the training image. This is done by
-    sampling a small field of size batch*(dim_1*...*dim_n), which is then resampled to image size, and rescaled to
-    postive values by taking the voxel-wise exponential. This field is finally multiplied to the image.
-    :param bias_field_std: (optional) if apply_bias_field is True, maximum value for the standard deviation of the
-    normal distribution from which we sample the first tensor for synthesising the bias field.
-    :param bias_shape_factor: (optional) Ratio between the size of the input label maps and the size of the sampled
-    tensor for synthesising the bias field.
+    :param bias_field_std: (optional) If not False, this triggers the corruption of images with a bias field. It is
+    obtained by sampling a first small tensor from a normal distribution, resizing it to full size, and rescaling it to
+    positive values by taking the voxel-wise exponential. bias_field_std designates the std dev of the normal
+    distribution from which we sample the first tensor. Set to False to deactivate biad field.
+    :param bias_shape_factor: (optional) If bias_field_std is not False, this designates the ratio between the size
+    of the input label maps and the size of the first sampled tensor for synthesising the bias field.
+    :param same_bias_for_all_channels: (optional) If bias_field_std is not False, whether to apply the same bias field
+    to all channels or not.
     :param augment_intensitites: (optional) whether to augment the intensities of the images with gamma augmentation.
     :param noise_std: (optional) if augment_intensities is true, maximum value for the standard deviation of the normal
     distribution from which we sample a Gaussian white noise. Set to 0 to deactivate white noise augmentation.
@@ -186,9 +187,9 @@ def training(image_dir,
                                                   translation_bounds=translation_bounds,
                                                   nonlin_std=nonlin_std,
                                                   nonlin_shape_factor=nonlin_shape_factor,
-                                                  apply_bias_field=apply_bias_field,
                                                   bias_field_std=bias_field_std,
                                                   bias_shape_factor=bias_shape_factor,
+                                                  same_bias_for_all_channels=same_bias_for_all_channels,
                                                   apply_intensity_augmentation=augment_intensitites,
                                                   noise_std=noise_std,
                                                   augment_channels_separately=augment_channels_separately)

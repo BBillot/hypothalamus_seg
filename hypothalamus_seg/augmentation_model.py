@@ -31,9 +31,9 @@ def build_augmentation_model(im_shape,
                              translation_bounds=False,
                              nonlin_std=3.,
                              nonlin_shape_factor=.0625,
-                             apply_bias_field=True,
                              bias_field_std=.3,
                              bias_shape_factor=0.025,
+                             same_bias_for_all_channels=False,
                              apply_intensity_augmentation=True,
                              noise_std=1.,
                              augment_channels_separately=True):
@@ -132,8 +132,9 @@ def build_augmentation_model(im_shape,
     image, labels = KL.Lambda(lambda x: tf.split(x, [n_channels, -1], axis=len(im_shape)), name='splitting')(image)
 
     # apply bias field
-    if apply_bias_field:
-        image = l2i_ia.bias_field_augmentation(image, bias_field_std, bias_shape_factor)
+    if bias_field_std is not False:
+        image._keras_shape = tuple(image.get_shape().as_list())
+        image = l2i_layers.BiasFieldCorruption(bias_field_std, bias_shape_factor, same_bias_for_all_channels)(image)
 
     # intensity augmentation
     if apply_intensity_augmentation:

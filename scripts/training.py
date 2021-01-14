@@ -34,11 +34,12 @@ parser.add_argument("--nonlin_std", type=float, default=3, dest="nonlin_std",
                     help="std dev. of the elastic deformation before upsampling to image size")
 parser.add_argument("--nonlin_shape_factor", type=float, default=.04, dest="nonlin_shape_factor",
                     help="ratio between the size of the image and the sampled elastic deformation")
-parser.add_argument("--no_bias_field", action='store_false', dest="apply_bias_field", help="deactivate bias field")
 parser.add_argument("--bias_field_std", type=float, default=.5, dest="bias_field_std",
                     help="std dev. of the bias field before upsampling to image size")
 parser.add_argument("--bias_shape_factor", type=float, default=.025, dest="bias_shape_factor",
                     help="ratio between the size of the image and the sampled bias field")
+parser.add_argument("--same_bias_for_all_channels", action='store_true', dest="same_bias_for_all_channels",
+                    help="whether to apply the same bias field to all channels.")
 parser.add_argument("--no_intensity_augmentation", action='store_false', dest="augment_intensitites",
                     help="deactivate intensity augmentation")
 parser.add_argument("--noise_std", type=float, default=1., dest="noise_std", help="std dev. of the gaussian noise")
