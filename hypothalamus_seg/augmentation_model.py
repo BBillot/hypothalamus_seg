@@ -24,8 +24,11 @@ def build_augmentation_model(im_shape,
                              flipping=True,
                              apply_flip_rl_only=False,
                              aff=None,
-                             apply_linear_trans=True,
-                             apply_nonlin_trans=True,
+                             scaling_bounds=0.15,
+                             rotation_bounds=15,
+                             enable_90_rotations=False,
+                             shearing_bounds=0.012,
+                             translation_bounds=False,
                              nonlin_std=3.,
                              nonlin_shape_factor=.0625,
                              apply_bias_field=True,
@@ -54,13 +57,7 @@ def build_augmentation_model(im_shape,
 
     # define model inputs
     image_in = KL.Input(shape=im_shape, name='image_input')
-    labels_in = KL.Input(shape=im_shape[:-1], name='labels_input', dtype='int32')
-    list_inputs = [image_in, labels_in]
-    if apply_linear_trans:
-        aff_in = KL.Input(shape=(n_dims + 1, n_dims + 1), name='aff_input')
-        list_inputs.append(aff_in)
-    else:
-        aff_in = None
+    labels_in = KL.Input(shape=im_shape[:-1] + [1], name='labels_input', dtype='int32')
 
     # convert labels to new_label_list
     labels = l2i_et.convert_labels(labels_in, lut)
@@ -102,8 +99,16 @@ def build_augmentation_model(im_shape,
         image = KL.concatenate([image_in, split_labels], axis=len(im_shape), name='inputs_cat')
 
     # spatial deformation
-    if apply_linear_trans | apply_nonlin_trans:
-        image = l2i_sp.deform_tensor(image, aff_in, nonlin_std=nonlin_std, nonlin_shape_factor=nonlin_shape_factor)
+    if (scaling_bounds is not False) | (rotation_bounds is not False) | (shearing_bounds is not False) | \
+       (translation_bounds is not False) | (nonlin_std is not False) | enable_90_rotations:
+        image._keras_shape = tuple(image.get_shape().as_list())
+        image = l2i_layers.RandomSpatialDeformation(scaling_bounds=scaling_bounds,
+                                                    rotation_bounds=rotation_bounds,
+                                                    shearing_bounds=shearing_bounds,
+                                                    translation_bounds=translation_bounds,
+                                                    enable_90_rotations=enable_90_rotations,
+                                                    nonlin_std=nonlin_std,
+                                                    nonlin_shape_factor=nonlin_shape_factor)(image)
 
     # cropping
     if cropping_shape != im_shape[:-1]:
@@ -158,7 +163,7 @@ def build_augmentation_model(im_shape,
                 image = intensity_augmented_channels[0]
 
     # build model
-    im_trans_model = Model(inputs=list_inputs, outputs=[image, labels])
+    im_trans_model = Model(inputs=[image_in, labels_in], outputs=[image, labels])
 
     return im_trans_model
 

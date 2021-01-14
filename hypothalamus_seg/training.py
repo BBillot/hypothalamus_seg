@@ -26,12 +26,11 @@ def training(image_dir,
              output_shape=None,
              flipping=True,
              flip_rl_only=False,
-             apply_linear_trans=True,
              scaling_bounds=0.15,
              rotation_bounds=15,
-             shearing_bounds=.012,
              enable_90_rotations=False,
-             apply_nonlin_trans=True,
+             shearing_bounds=.012,
+             translation_bounds=False,
              nonlin_std=3.,
              nonlin_shape_factor=.04,
              apply_bias_field=True,
@@ -83,8 +82,6 @@ def training(image_dir,
     # Augmentation parameters
     :param flipping: (optional) whether to introduce random flipping. Default is True.
     :param flip_rl_only: (optional) if flipping is True, whether to flip only in the right/left axis. Default is False.
-    :param apply_linear_trans: (optional) whether to apply a random linear transformation to the training data.
-    This includes random scaling, rotation, and shearing. Default is True.
     :param scaling_bounds: (optional) if apply_linear_trans is True, the scaling factor for each dimension is
     sampled from a uniform distribution of predefined bounds. scaling_bounds can either be:
     1) a number, in which case the scaling factor is independently sampled from the uniform distribution of bounds
@@ -96,13 +93,11 @@ def training(image_dir,
     :param rotation_bounds: (optional) same as scaling bounds but for the rotation angle, except that for case 1 the
     bounds are centred on 0 rather than 1, i.e. (0+rotation_bounds[i], 0-rotation_bounds[i]).
     Default is rotation_bounds = 15.
+    :param enable_90_rotations: (optional) wheter to rotate the input by a random angle chosen in {0, 90, 180, 270}.
+    This is done regardless of the value of rotation_bounds. If true, a different value is sampled for each dimension.
     :param shearing_bounds: (optional) same as scaling bounds. Default is shearing_bounds = 0.012.
-    :param enable_90_rotations: (optional) wheter to additionally (i.e. additionally to rotation bound) rotate the input
-     by a random angle chosen in {0, 90, 180, 270}.
-    :param apply_nonlin_trans: (optional) whether to apply a random elastic deformation to the training data.
-    This is done by sampling a small non linear field of size batch*(dim_1*...*dim_n)*n_dims from a Gaussian
-    distribution. This field is then resampled to image size, and finally integrated to obtain a diffeomorphic elastic
-    deformation. Default is True.
+    :param translation_bounds: (optional) same as scaling bounds. Default is translation_bounds = False, but we
+    encourage using it when cropping is deactivated (i.e. when output_shape=None in BrainGenerator).
     :param nonlin_std: (optional) if apply_nonlin_trans is True, maximum value for the standard deviation of the normal
     distribution from which we sample the first tensor for synthesising the deformation field.
     :param nonlin_shape_factor: (optional) ratio between the size of the input label maps and the size of the sampled
@@ -182,10 +177,13 @@ def training(image_dir,
                                                   output_shape=output_shape,
                                                   output_div_by_n=2**n_levels,
                                                   flipping=flipping,
-                                                  apply_flip_rl_only=flip_rl_only,
+                                                  flip_rl_only=flip_rl_only,
                                                   aff=np.eye(4),
-                                                  apply_linear_trans=apply_linear_trans,
-                                                  apply_nonlin_trans=apply_nonlin_trans,
+                                                  scaling_bounds=scaling_bounds,
+                                                  rotation_bounds=rotation_bounds,
+                                                  enable_90_rotations=enable_90_rotations,
+                                                  shearing_bounds=shearing_bounds,
+                                                  translation_bounds=translation_bounds,
                                                   nonlin_std=nonlin_std,
                                                   nonlin_shape_factor=nonlin_shape_factor,
                                                   apply_bias_field=apply_bias_field,
@@ -213,12 +211,7 @@ def training(image_dir,
     train_example_gen = image_seg_generator(path_images=path_images,
                                             path_labels=path_label_maps,
                                             batchsize=batchsize,
-                                            n_channels=n_channels,
-                                            apply_linear_trans=apply_linear_trans,
-                                            scaling_bounds=scaling_bounds,
-                                            rotation_bounds=rotation_bounds,
-                                            shearing_bounds=shearing_bounds,
-                                            enable_90_rotations=enable_90_rotations)
+                                            n_channels=n_channels)
     training_generator = utils.build_training_generator(train_example_gen, batchsize)
 
     # pre-training with weighted L2, input is fit to the softmax rather than the probabilities

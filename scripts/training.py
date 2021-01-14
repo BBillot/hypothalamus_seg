@@ -24,15 +24,12 @@ parser.add_argument("--unet_shape", type=str, dest="output_shape", default=None,
 # Augmentation parameters
 parser.add_argument("--no_flip", action='store_false', dest="flipping", help="deactivate flipping")
 parser.add_argument("--flip_rl_only", action='store_true', dest="flip_rl_only", help="only flip along right/left axis")
-parser.add_argument("--no_linear_trans", action='store_false', dest="apply_linear_trans",
-                    help="deactivate linear transform")
 parser.add_argument("--scaling", type=infer, default=.15, dest="scaling_bounds", help="scaling range")
 parser.add_argument("--rotation", type=infer, default=15, dest="rotation_bounds", help="rotation range")
-parser.add_argument("--shearing", type=infer, default=.012, dest="shearing_bounds", help="shearing range")
 parser.add_argument("--90_rotations", action='store_true', dest="enable_90_rotations",
                     help="wehther to introduce additional rotations of 0, 90, 180, or 270 degrees.")
-parser.add_argument("--no_elastic_trans", action='store_false', dest="apply_nonlin_trans",
-                    help="deactivate elastic transform")
+parser.add_argument("--shearing", type=infer, default=.012, dest="shearing_bounds", help="shearing range")
+parser.add_argument("--translation", type=infer, default=False, dest="translation_bounds", help="translation range")
 parser.add_argument("--nonlin_std", type=float, default=3, dest="nonlin_std",
                     help="std dev. of the elastic deformation before upsampling to image size")
 parser.add_argument("--nonlin_shape_factor", type=float, default=.04, dest="nonlin_shape_factor",
