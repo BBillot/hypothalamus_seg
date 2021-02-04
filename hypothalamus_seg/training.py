@@ -150,7 +150,7 @@ def training(image_dir,
 
     # read info from image and get label list
     im_shape, _, _, n_channels, _, image_res = utils.get_volume_info(path_images[0], aff_ref=np.eye(4))
-    label_list = utils.get_list_labels(path_label_list, labels_dir=labels_dir, save_label_list=save_label_list)
+    label_list, _ = utils.get_list_labels(path_label_list, labels_dir=labels_dir, save_label_list=save_label_list)
     n_labels = np.size(label_list)
 
     # prepare model folder

@@ -217,7 +217,8 @@ def get_list_labels(label_list=None, labels_dir=None, save_label_list=None, FS_s
     n_neutral_labels = 0
     if FS_sort:
         neutral_FS_labels = [0, 14, 15, 16, 21, 22, 23, 24, 72, 77, 80, 85, 101, 102, 103, 104, 105, 165, 251, 252, 253,
-                             254, 255, 258, 259, 331, 332, 333, 334, 335, 336, 337, 338, 339, 340]
+                             254, 255, 258, 259, 331, 332, 333, 334, 335, 336, 337, 338, 339, 340,
+                             502, 506, 507, 508, 509, 511, 512, 514, 515, 516, 530]
         neutral = list()
         left = list()
         right = list()
@@ -244,7 +245,7 @@ def get_list_labels(label_list=None, labels_dir=None, save_label_list=None, FS_s
     if FS_sort:
         return np.int32(label_list), n_neutral_labels
     else:
-        return np.int32(label_list)
+        return np.int32(label_list), None
 
 
 def load_array_if_path(var, load_as_numpy=True):
@@ -362,15 +363,20 @@ def reformat_to_n_channels_array(var, n_dims=3, n_channels=1):
 
 def list_images_in_folder(path_dir, include_single_image=True):
     """List all files with extension nii, nii.gz, mgz, or npz whithin a folder."""
+    basename = os.path.basename(path_dir)
     if include_single_image & \
-       (('.nii.gz' in path_dir) | ('.nii' in path_dir) | ('.mgz' in path_dir) | ('.npz' in path_dir)):
+            (('.nii.gz' in basename) | ('.nii' in basename) | ('.mgz' in basename) | ('.npz' in basename)):
+        assert os.path.isfile(path_dir), 'file %s does not exist' % path_dir
         list_images = [path_dir]
     else:
-        list_images = sorted(glob.glob(os.path.join(path_dir, '*nii.gz')) +
-                             glob.glob(os.path.join(path_dir, '*nii')) +
-                             glob.glob(os.path.join(path_dir, '*.mgz')) +
-                             glob.glob(os.path.join(path_dir, '*.npz')))
-    assert len(list_images) > 0, 'no nii, nii.gz, mgz or npz could be found in %s' % path_dir
+        if os.path.isdir(path_dir):
+            list_images = sorted(glob.glob(os.path.join(path_dir, '*nii.gz')) +
+                                 glob.glob(os.path.join(path_dir, '*nii')) +
+                                 glob.glob(os.path.join(path_dir, '*.mgz')) +
+                                 glob.glob(os.path.join(path_dir, '*.npz')))
+        else:
+            raise Exception('extension not supported for %s, only use: nii.gz, .nii, .mgz, or .npz' % path_dir)
+        assert len(list_images) > 0, 'no .nii, .nii.gz, .mgz or .npz image could be found in %s' % path_dir
     return list_images
 
 
@@ -788,9 +794,9 @@ def rearrange_label_list(label_list):
     label_list = np.array(reformat_to_list(label_list))
     n_labels = label_list.shape[0]
     new_label_list = np.arange(n_labels)
-    lut = np.zeros(np.max(label_list).astype('int') + 1)
+    lut = np.zeros(np.max(label_list) + 1, dtype='int32')
     for n in range(n_labels):
-        lut[label_list[n].astype('int')] = n
+        lut[int(label_list[n])] = n
     return new_label_list, lut
 
 
@@ -824,9 +830,12 @@ def find_closest_number_divisible_by_m(n, m, smaller_ans=True):
         return n2
 
 
-def build_binary_structure(connectivity, n_dims):
+def build_binary_structure(connectivity, n_dims, shape=None):
     """Return a dilation/erosion element with provided connectivity"""
-    shape = [connectivity * 2 + 1] * n_dims
+    if shape is None:
+        shape = [connectivity * 2 + 1] * n_dims
+    else:
+        shape = reformat_to_list(shape, length=n_dims)
     dist = np.ones(shape)
     center = tuple([tuple([int(s / 2)]) for s in shape])
     dist[center] = 0
