@@ -13,28 +13,37 @@ def fast_dice(x, y, labels):
     """Fast implementation of Dice scores.
     :param x: input label map
     :param y: input label map of the same size as x
-    :param labels: numpy array of labels to evaluate on, sorted in increasing order.
+    :param labels: numpy array of labels to evaluate on
     :return: numpy array with Dice scores in the same order as labels.
     """
 
     assert x.shape == y.shape, 'both inputs should have same size, had {} and {}'.format(x.shape, y.shape)
 
     if len(labels) > 1:
-        label_edges = np.concatenate([labels[0:1] - 0.5, labels + 0.5])
-        hst = np.histogram2d(x.flatten(), y.flatten(), bins=label_edges)
-        c = hst[0]
-        dice_score = np.diag(c) * 2 / (np.sum(c, 0) + np.sum(c, 1) + 1e-5)
+        # sort labels
+        labels_sorted = np.sort(labels)
+
+        # build bins for histograms
+        m = np.minimum(np.min(x), np.min(y))
+        M = np.maximum(np.max(x), np.max(y))
+        label_edges = np.sort(np.concatenate([labels_sorted - 0.1, labels_sorted + 0.1]))
+        label_edges = np.insert(label_edges, [0, len(label_edges)], [m - 0.1, M + 0.1])
+
+        # compute Dice and re-arange scores in initial order
+        hst = np.histogram2d(x.flatten(), y.flatten(), bins=label_edges)[0]
+        idx = np.arange(start=1, stop=2 * len(labels_sorted), step=2)
+        dice_score = 2 * np.diag(hst)[idx] / (np.sum(hst, 0)[idx] + np.sum(hst, 1)[idx] + 1e-5)
+        dice_score = dice_score[np.searchsorted(labels_sorted, labels)]
+
     else:
-        x = (x == labels[0]) * 1
-        y = (y == labels[0]) * 1
-        dice_score = 2 * np.sum(x * y) / (np.sum(x) + np.sum(y))
+        dice_score = dice(x == labels[0], y == labels[0])
 
     return dice_score
 
 
 def dice(x, y):
     """Implementation of dice scores ofr 0/1 numy array"""
-    return 2 * np.sum(x*y) / (np.sum(x) + np.sum(y))
+    return 2 * np.sum(x * y) / (np.sum(x) + np.sum(y))
 
 
 def surface_distances(x, y):
@@ -162,8 +171,7 @@ def reproducibility_test(gt_dir,
         print('different number of files in data folders, had {} and {}'.format(len(path_gt_labels), len(path_segs)))
 
     # load labels list
-    label_list = utils.get_list_labels(label_list, labels_dir=gt_dir)
-    label_list_sorted = np.sort(label_list)
+    label_list, _ = utils.get_list_labels(label_list, labels_dir=gt_dir)
 
     # initialise result matrices
     max_dists = np.zeros((label_list.shape[0] + 1, len(path_segs)))
@@ -185,8 +193,7 @@ def reproducibility_test(gt_dir,
         unique_gt_labels = np.unique(gt_labels)
         unique_seg_labels = np.unique(seg)
         # compute dice scores
-        tmp_dice = fast_dice(gt_labels, seg, label_list_sorted)
-        dice_coefs[:-1, idx] = tmp_dice[np.searchsorted(label_list_sorted, label_list)]
+        dice_coefs[:-1, idx] = fast_dice(gt_labels, seg, label_list)
         # compute max/mean surface distances for all nuclei
         for index, label in enumerate(label_list):
             if (label in unique_gt_labels) & (label in unique_seg_labels):
