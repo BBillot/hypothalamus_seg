@@ -1,17 +1,22 @@
 # python imports
 import os
+import keras
 import numpy as np
+import tensorflow as tf
+from keras import models
 import keras.callbacks as KC
-from keras.models import Model
 from keras.optimizers import Adam
+from inspect import getmembers, isclass
 
 # project imports
-from . import metrics_model
+from . import metrics_model as metrics
 from .model_inputs import image_seg_generator
 from .augmentation_model import build_augmentation_model
 
 # third-party imports
 from ext.lab2im import utils
+from ext.lab2im import layers as l2i_layers
+from ext.neuron import layers as nrn_layers
 from ext.neuron import models as nrn_models
 
 
@@ -51,9 +56,7 @@ def training(image_dir,
              wl2_epochs=5,
              dice_epochs=200,
              steps_per_epoch=1000,
-             load_model_file=None,
-             initial_epoch_wl2=0,
-             initial_epoch_dice=0):
+             checkpoint=None):
     """
     This function trains a neural network with aggressively augmented images. The model is implemented on the GPU and
     contains three sub-model: one for augmentation, one neural network (UNet), and one for computing the loss function.
@@ -123,7 +126,7 @@ def training(image_dir,
     :param conv_size: (optional) size of the convolution kernels. Default is 2.
     :param unet_feat_count: (optional) number of feature for the first layr of the Unet. Default is 24.
     :param feat_multiplier: (optional) multiply the number of feature by this nummber at each new level. Default is 1.
-    :param dropout: (optional) probability of drpout for the Unet. Deafult is 0, where no dropout is applied.
+    :param dropout: (optional) probability of dropout for the Unet. Deafult is 0, where no dropout is applied.
     :param activation: (optional) activation function. Can be 'elu', 'relu'.
 
     # ----------------------------------------------- Training parameters ----------------------------------------------
@@ -134,9 +137,7 @@ def training(image_dir,
     :param dice_epochs: (optional) number of epochs with the soft Dice loss function. default is 100.
     :param steps_per_epoch: (optional) number of steps per epoch. Default is 1000. Since no online validation is
     possible, this is equivalent to the frequency at which the models are saved.
-    :param load_model_file: (optional) path of an already saved model to load before starting the training.
-    :param initial_epoch_wl2: (optional) initial epoch for wl2 training. Useful for resuming training.
-    :param initial_epoch_dice: (optional) initial epoch for dice training. Useful for resuming training.
+    :param checkpoint: (optional) path of an already saved model to load before starting the training.
     """
 
     # check epochs
@@ -156,10 +157,6 @@ def training(image_dir,
     # prepare model folder
     utils.mkdir(model_dir)
 
-    # prepare log folder
-    log_dir = os.path.join(model_dir, 'logs')
-    utils.mkdir(log_dir)
-
     # transformation model
     augmentation_model = build_augmentation_model(im_shape=im_shape,
                                                   n_channels=n_channels,
@@ -168,7 +165,7 @@ def training(image_dir,
                                                   image_res=image_res,
                                                   target_res=target_res,
                                                   output_shape=output_shape,
-                                                  output_div_by_n=2**n_levels,
+                                                  output_div_by_n=2 ** n_levels,
                                                   flipping=flipping,
                                                   flip_rl_only=flip_rl_only,
                                                   aff=np.eye(4),
@@ -205,27 +202,18 @@ def training(image_dir,
                                             path_labels=path_label_maps,
                                             batchsize=batchsize,
                                             n_channels=n_channels)
-    training_generator = utils.build_training_generator(train_example_gen, batchsize)
+    input_generator = utils.build_training_generator(train_example_gen, batchsize)
 
     # pre-training with weighted L2, input is fit to the softmax rather than the probabilities
     if wl2_epochs > 0:
-        wl2_model = Model(unet_model.inputs, [unet_model.get_layer('unet_likelihood').output])
-        wl2_model = metrics_model.metrics_model(input_model=wl2_model, metrics='wl2')
-        if load_model_file is not None:
-            wl2_model.load_weights(load_model_file)
-        train_model(wl2_model, training_generator, lr, lr_decay, wl2_epochs, steps_per_epoch, model_dir, log_dir,
-                    'wl2', initial_epoch_wl2)
+        wl2_model = models.Model(unet_model.inputs, [unet_model.get_layer('unet_likelihood').output])
+        wl2_model = metrics.metrics_model(input_model=wl2_model, metrics='wl2')
+        train_model(wl2_model, input_generator, lr, lr_decay, wl2_epochs, steps_per_epoch, model_dir, 'wl2', checkpoint)
+        checkpoint = os.path.join(model_dir, 'wl2_%03d.h5' % wl2_epochs)
 
     # fine-tuning with dice metric
-    if dice_epochs > 0:
-        dice_model = metrics_model.metrics_model(input_model=unet_model)
-        if wl2_epochs > 0:
-            last_wl2_model_name = os.path.join(model_dir, 'wl2_%03d.h5' % wl2_epochs)
-            dice_model.load_weights(last_wl2_model_name, by_name=True)
-        elif load_model_file is not None:
-            dice_model.load_weights(load_model_file)
-        train_model(dice_model, training_generator, lr, lr_decay, dice_epochs, steps_per_epoch, model_dir, log_dir,
-                    'dice', initial_epoch_dice)
+    dice_model = metrics.metrics_model(input_model=unet_model, metrics='dice')
+    train_model(dice_model, input_generator, lr, lr_decay, dice_epochs, steps_per_epoch, model_dir, 'dice', checkpoint)
 
 
 def train_model(model,
@@ -235,26 +223,43 @@ def train_model(model,
                 n_epochs,
                 n_steps,
                 model_dir,
-                log_dir,
                 metric_type,
-                initial_epoch=0):
+                path_checkpoint=None):
+
+    # prepare log folder
+    log_dir = os.path.join(model_dir, 'logs')
+    utils.mkdir(log_dir)
 
     # model saving callback
     save_file_name = os.path.join(model_dir, '%s_{epoch:03d}.h5' % metric_type)
-    callbacks = [KC.ModelCheckpoint(save_file_name, save_weights_only=True, verbose=1)]
+    callbacks = [KC.ModelCheckpoint(save_file_name, verbose=1)]
 
     # TensorBoard callback
     if metric_type == 'dice':
         callbacks.append(KC.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=True, write_images=False))
 
+    compile_model = True
+    init_epoch = 0
+    if path_checkpoint is not None:
+        if metric_type in path_checkpoint:
+            custom_l2i = {key: value for (key, value) in getmembers(l2i_layers, isclass) if key != 'Layer'}
+            custom_nrn = {key: value for (key, value) in getmembers(nrn_layers, isclass) if key != 'Layer'}
+            custom_objects = {**custom_l2i, **custom_nrn, 'tf': tf, 'keras': keras, 'loss': metrics.IdentityLoss().loss}
+            model = models.load_model(path_checkpoint, custom_objects=custom_objects)
+            compile_model = False
+            init_epoch = int(os.path.basename(path_checkpoint).split(metric_type)[1][1:-3])
+        else:
+            model.load_weights(path_checkpoint, by_name=True)
+
     # compile
-    model.compile(optimizer=Adam(lr=learning_rate, decay=lr_decay),
-                  loss=metrics_model.IdentityLoss().loss,
-                  loss_weights=[1.0])
+    if compile_model:
+        model.compile(optimizer=Adam(lr=learning_rate, decay=lr_decay),
+                      loss=metrics.IdentityLoss().loss,
+                      loss_weights=[1.0])
 
     # fit
     model.fit_generator(generator,
                         epochs=n_epochs,
                         steps_per_epoch=n_steps,
                         callbacks=callbacks,
-                        initial_epoch=initial_epoch)
+                        initial_epoch=init_epoch)
