@@ -98,14 +98,14 @@ def training(image_dir,
     :param shearing_bounds: (optional) same as scaling bounds. Default is shearing_bounds = 0.012.
     :param translation_bounds: (optional) same as scaling bounds. Default is translation_bounds = False, but we
     encourage using it when cropping is deactivated (i.e. when output_shape=None in BrainGenerator).
-    :param nonlin_std: (optional) if apply_nonlin_trans is True, maximum value for the standard deviation of the normal
-    distribution from which we sample the first tensor for synthesising the deformation field.
+    :param nonlin_std: (optional) maximum value for the standard deviation of the normal distribution from which we
+    sample the first tensor for synthesising the deformation field. Set to 0 to completely turn it off.
     :param nonlin_shape_factor: (optional) ratio between the size of the input label maps and the size of the sampled
     tensor for synthesising the elastic deformation field.
-    :param bias_field_std: (optional) If not False, this triggers the corruption of images with a bias field. It is
-    obtained by sampling a first small tensor from a normal distribution, resizing it to full size, and rescaling it to
-    positive values by taking the voxel-wise exponential. bias_field_std designates the std dev of the normal
-    distribution from which we sample the first tensor. Set to False to deactivate biad field.
+    :param bias_field_std: (optional) If strictly positive, this triggers the corruption of images with a bias field.
+    It is obtained by sampling a first small tensor from a normal distribution, resizing it to full size, and rescaling
+    it to positive values by taking the voxel-wise exponential. bias_field_std designates the std dev of the normal
+    distribution from which we sample the first tensor. Set to 0 to deactivate biad field.
     :param bias_shape_factor: (optional) If bias_field_std is not False, this designates the ratio between the size
     of the input label maps and the size of the first sampled tensor for synthesising the bias field.
     :param same_bias_for_all_channels: (optional) If bias_field_std is not False, whether to apply the same bias field

@@ -258,7 +258,7 @@ def crop_volume_with_idx(volume, crop_idx, aff=None):
     """
 
     # crop image
-    n_dims = int(crop_idx.shape[0] / 2)
+    n_dims = int(np.array(crop_idx).shape[0] / 2)
     if n_dims == 2:
         volume = volume[crop_idx[0]:crop_idx[2], crop_idx[1]:crop_idx[3], ...]
     elif n_dims == 3:
@@ -506,7 +506,7 @@ def mask_label_map(labels, masking_values, masking_value=0, return_mask=False):
     # build mask and mask labels
     mask = np.zeros(labels.shape, dtype=bool)
     masked_labels = labels.copy()
-    for value in masking_values:
+    for value in utils.reformat_to_list(masking_values):
         mask = mask | (labels == value)
     masked_labels[np.logical_not(mask)] = masking_value
 
@@ -885,7 +885,7 @@ def pad_images_in_dir(image_dir, result_dir, max_shape=None, padding_value=0, re
 
     # loop over label maps
     for idx, path_image in enumerate(path_images):
-        utils.print_loop_info(idx, len(path_images), 5)
+        utils.print_loop_info(idx, len(path_images), 10)
 
         # pad map
         path_result = os.path.join(result_dir, os.path.basename(path_image))
@@ -1041,7 +1041,7 @@ def blur_images_in_dir(image_dir, result_dir, sigma, mask_dir=None, gpu=False, r
 
 def create_mutlimodal_images(list_channel_dir, result_dir, recompute=True):
     """This function forms multimodal images by stacking channels located in different folders.
-    :param list_channel_dir: list of all directories, each containing the same channel for allimages.
+    :param list_channel_dir: list of all directories, each containing the same channel for all images.
     Channels are matched between folders by sorting order.
     :param result_dir: path of directory where multimodal images will be writen
     :param recompute: (optional) whether to recompute result files even if they already exists
@@ -1050,8 +1050,7 @@ def create_mutlimodal_images(list_channel_dir, result_dir, recompute=True):
     # create result dir
     utils.mkdir(result_dir)
 
-    if not isinstance(list_channel_dir, list):
-        raise TypeError('list_channel_dir should be a list')
+    assert isinstance(list_channel_dir, (list, tuple)), 'list_channel_dir should be a list or a tuple'
 
     # gather path of all images for all channels
     list_channel_paths = [utils.list_images_in_folder(d) for d in list_channel_dir]
@@ -1408,10 +1407,7 @@ def mask_labels_in_dir(labels_dir, result_dir, values_to_keep, masking_value=0, 
         utils.mkdir(mask_result_dir)
 
     # reformat values to keep
-    if isinstance(values_to_keep, (int, float)):
-        values_to_keep = [values_to_keep]
-    elif not isinstance(values_to_keep, (tuple, list)):
-        raise TypeError('values to keep should be int, float, tuple, or list')
+    values_to_keep = utils.reformat_to_list(values_to_keep, load_as_numpy=True)
 
     # loop over labels
     path_labels = utils.list_images_in_folder(labels_dir)
@@ -1576,7 +1572,7 @@ def upsample_labels_in_dir(labels_dir,
     # set up FreeSurfer
     os.environ['FREESURFER_HOME'] = path_freesurfer
     os.system(os.path.join(path_freesurfer, 'SetUpFreeSurfer.sh'))
-    mri_convert = os.path.join(path_freesurfer, 'bin/mri_convert.bin')
+    mri_convert = os.path.join(path_freesurfer, 'bin/mri_convert')
 
     # list label maps
     path_labels = utils.list_images_in_folder(labels_dir)

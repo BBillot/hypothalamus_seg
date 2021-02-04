@@ -23,6 +23,7 @@ scripts/label_fusion_analysis.py
 scripts/prepare_QC.py
 scripts/preprocess_cortex.py
 scripts/training_gpuid.py
+scripts/validation_cortex.py
 
 build
 dist
