@@ -76,7 +76,7 @@ def build_augmentation_model(im_shape,
 
     # spatial deformation
     if (scaling_bounds is not False) | (rotation_bounds is not False) | (shearing_bounds is not False) | \
-       (translation_bounds is not False) | (nonlin_std is not False) | enable_90_rotations:
+       (translation_bounds is not False) | (nonlin_std > 0) | enable_90_rotations:
         image._keras_shape = tuple(image.get_shape().as_list())
         image = l2i_layers.RandomSpatialDeformation(scaling_bounds=scaling_bounds,
                                                     rotation_bounds=rotation_bounds,
@@ -105,7 +105,7 @@ def build_augmentation_model(im_shape,
     image, labels = KL.Lambda(lambda x: tf.split(x, [n_channels, -1], axis=len(im_shape)), name='splitting')(image)
 
     # apply bias field
-    if bias_field_std is not False:
+    if bias_field_std > 0:
         image._keras_shape = tuple(image.get_shape().as_list())
         image = l2i_layers.BiasFieldCorruption(bias_field_std, bias_shape_factor, same_bias_for_all_channels)(image)
 

@@ -57,7 +57,7 @@ class RandomSpatialDeformation(Layer):
     :param enable_90_rotations: (optional) wheter to rotate the input by a random angle chosen in {0, 90, 180, 270}.
     This is done regardless of the value of rotation_bounds. If true, a different value is sampled for each dimension.
     :param nonlin_std: (optional) maximum value of the standard deviation of the normal distribution from which we
-    sample the small-size SVF. Set to False if you wish to completely turn the elastic deformation off.
+    sample the small-size SVF. Set to 0 if you wish to completely turn the elastic deformation off.
     :param nonlin_shape_factor: (optional) if nonlin_std is not False, factor between the shapes of the input tensor
     and the shape of the input non-linear tensor.
     :param inter_method: (optional) interpolation method when deforming the input tensor. Can be 'linear', or 'nearest'
@@ -124,7 +124,7 @@ class RandomSpatialDeformation(Layer):
         self.apply_affine_trans = (self.scaling_bounds is not False) | (self.rotation_bounds is not False) | \
                                   (self.shearing_bounds is not False) | (self.translation_bounds is not False) | \
                                   self.enable_90_rotations
-        self.apply_elastic_trans = (self.nonlin_std is not False)
+        self.apply_elastic_trans = self.nonlin_std > 0
         assert (self.apply_affine_trans is not None) | self.apply_elastic_trans, \
             'affine_trans or elastic_trans should be provided'
 
@@ -839,7 +839,7 @@ class BiasFieldCorruption(Layer):
     :param same_bias_for_all_channels: whether to apply the same bias field to all the channels of the input tensor.
     """
 
-    def __init__(self, bias_field_std=.3, bias_shape_factor=.025, same_bias_for_all_channels=False, **kwargs):
+    def __init__(self, bias_field_std=.5, bias_shape_factor=.025, same_bias_for_all_channels=False, **kwargs):
 
         # input shape
         self.several_inputs = False
