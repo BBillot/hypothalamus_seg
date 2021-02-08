@@ -63,12 +63,7 @@ parser.add_argument("--wl2_epochs", type=int, dest="wl2_epochs", default=5, help
 parser.add_argument("--dice_epochs", type=int, dest="dice_epochs", default=200, help="number of iterations")
 parser.add_argument("--steps_per_epoch", type=int, dest="steps_per_epoch", default=1000,
                     help="frequency of model saves")
-parser.add_argument("--load_model_file", type=str, dest="load_model_file", default=None,
-                    help="optional h5 model file to initialise the training with.")
-parser.add_argument("--initial_epoch_wl2", type=int, dest="initial_epoch_wl2", default=0,
-                    help="initial epoch for wl2 pretraining model, useful when resuming wl2 training")
-parser.add_argument("--initial_epoch_dice", type=int, dest="initial_epoch_dice", default=0,
-                    help="initial epoch for dice model, useful when resuming dice model training")
+parser.add_argument("--checkpoint", type=str, dest="checkpoint", default=None, help="h5 model to resume training.")
 
 args = parser.parse_args()
 training(**vars(args))

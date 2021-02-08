@@ -81,9 +81,6 @@ def predict(path_images,
     :param verbose: (optional) whether to print out info about the remaining number of cases.
     """
 
-    assert path_model, "A model file is necessary"
-    assert path_segmentations or path_posteriors, "output segmentation (or posteriors) is required"
-
     # prepare output filepaths
     images_to_segment, path_segmentations, path_posteriors, path_volumes = prepare_output_files(path_images,
                                                                                                 path_segmentations,
@@ -116,7 +113,7 @@ def predict(path_images,
             utils.print_loop_info(idx, len(images_to_segment), 10)
 
         # preprocess image and get information
-        image, aff, h, im_res, n_channels, n_dims, shape, pad_shape, cropping, crop_idx = \
+        image, aff, h, im_res, n_channels, n_dims, shape, pad_shape, crop_idx = \
             preprocess_image(path_image, n_levels, cropping, padding)
         model_input_shape = list(image.shape[1:])
 
@@ -124,7 +121,7 @@ def predict(path_images,
         if (idx == 0) | (previous_model_input_shape != model_input_shape):
 
             # check for image size compatibility
-            if (idx != 0) & (previous_model_input_shape != model_input_shape):
+            if (idx != 0) & (previous_model_input_shape != model_input_shape) & verbose:
                 print('image of different shape as previous ones, redefining network')
             previous_model_input_shape = model_input_shape
 
@@ -136,7 +133,7 @@ def predict(path_images,
         prediction_patch = net.predict(image)
 
         # get posteriors and segmentation
-        seg, posteriors = postprocess(prediction_patch, cropping, pad_shape, shape, crop_idx, n_dims, label_list,
+        seg, posteriors = postprocess(prediction_patch, pad_shape, shape, crop_idx, n_dims, label_list,
                                       keep_biggest_component, aff)
 
         # compute volumes
@@ -155,10 +152,7 @@ def predict(path_images,
             utils.save_volume(seg.astype('int'), aff, h, path_segmentation)
         if path_posterior is not None:
             if n_channels > 1:
-                new_shape = list(posteriors.shape)
-                new_shape.insert(-1, 1)
-                new_shape = tuple(new_shape)
-                posteriors = np.reshape(posteriors, new_shape)
+                posteriors = utils.add_axis(posteriors, axis=[0, -1])
             utils.save_volume(posteriors.astype('float'), aff, h, path_posterior)
 
     # evaluate
@@ -171,6 +165,8 @@ def predict(path_images,
 
 
 def prepare_output_files(path_images, out_seg, out_posteriors, out_volumes):
+
+    assert out_seg or out_posteriors, "output segmentation (or posteriors) is required"
 
     # convert path to absolute paths
     path_images = os.path.abspath(path_images)
@@ -244,12 +240,8 @@ def preprocess_image(im_path, n_levels, crop_shape=None, padding=None):
                                                                                return_volume=True)
 
     if padding:
-        if n_channels == 1:
-            im = np.pad(im, padding, mode='constant')
-            pad_shape = im.shape
-        else:
-            im = np.pad(im, tuple([(padding, padding)] * n_dims + [(0, 0)]), mode='constant')
-            pad_shape = im.shape[:-1]
+        im = edit_volumes.pad_volume(im, padding_shape=padding)
+        pad_shape = im.shape[:n_dims]
     else:
         pad_shape = shape
 
@@ -258,7 +250,6 @@ def preprocess_image(im_path, n_levels, crop_shape=None, padding=None):
         crop_shape = utils.reformat_to_list(crop_shape, length=n_dims, dtype='int')
         if not all([pad_shape[i] >= crop_shape[i] for i in range(len(pad_shape))]):
             crop_shape = [min(pad_shape[i], crop_shape[i]) for i in range(n_dims)]
-            print('cropping dimensions are higher than image size, changing cropping size to {}'.format(crop_shape))
         if not all([size % (2**n_levels) == 0 for size in crop_shape]):
             crop_shape = [utils.find_closest_number_divisible_by_m(size, 2 ** n_levels) for size in crop_shape]
     else:
@@ -267,9 +258,7 @@ def preprocess_image(im_path, n_levels, crop_shape=None, padding=None):
 
     # crop image if necessary
     if crop_shape is not None:
-        crop_idx = np.round((pad_shape - np.array(crop_shape)) / 2).astype('int')
-        crop_idx = np.concatenate((crop_idx, crop_idx + crop_shape), axis=0)
-        im = edit_volumes.crop_volume_with_idx(im, crop_idx=crop_idx)
+        im, crop_idx = edit_volumes.crop_volume(im, cropping_shape=crop_shape, return_crop_idx=True)
     else:
         crop_idx = None
 
@@ -280,25 +269,17 @@ def preprocess_image(im_path, n_levels, crop_shape=None, padding=None):
         im = np.zeros(im.shape)
     else:
         im = (im - m) / (M - m)
-    # # normalise image
-    # m = np.mean(im)
-    # M = np.max(im)
-    # if M == m:
-    #     im = np.zeros(im.shape)
-    # else:
-    #     im = (im - m) / M
 
     # add batch and channel axes
-    if n_channels > 1:
-        im = utils.add_axis(im)
-    else:
-        im = utils.add_axis(im, axis=[0, -1])
+    im = utils.add_axis(im) if n_channels > 1 else utils.add_axis(im, axis=[0, -1])
 
-    return im, aff, header, im_res, n_channels, n_dims, shape, pad_shape, crop_shape, crop_idx
+    return im, aff, header, im_res, n_channels, n_dims, shape, pad_shape, crop_idx
 
 
 def build_model(model_file, input_shape, resample, im_res, n_levels, n_lab, conv_size, nb_conv_per_level,
                 unet_feat_count, feat_multiplier, activation, sigma_smoothing):
+
+    assert os.path.isfile(model_file), "The provided model path does not exist."
 
     # initialisation
     net = None
@@ -362,7 +343,7 @@ def build_model(model_file, input_shape, resample, im_res, n_levels, n_lab, conv
     return net
 
 
-def postprocess(prediction, crop_shape, pad_shape, im_shape, crop, n_dims, labels, keep_biggest_component, aff):
+def postprocess(prediction, pad_shape, im_shape, crop, n_dims, labels, keep_biggest_component, aff):
 
     # get posteriors and segmentation
     post_patch = np.squeeze(prediction)
@@ -404,7 +385,7 @@ def postprocess(prediction, crop_shape, pad_shape, im_shape, crop, n_dims, label
         seg_patch = seg_left | seg_right
 
     # paste patches back to matrix of original image size
-    if crop_shape is not None:
+    if crop is not None:
         seg = np.zeros(shape=pad_shape, dtype='int32')
         posteriors = np.zeros(shape=[*pad_shape, labels.shape[0]])
         posteriors[..., 0] = np.ones(pad_shape)  # place background around patch
@@ -420,12 +401,9 @@ def postprocess(prediction, crop_shape, pad_shape, im_shape, crop, n_dims, label
     seg = labels[seg.astype('int')].astype('int')
 
     if im_shape != pad_shape:
-        lower_bound = [int((p-i)/2) for (p, i) in zip(pad_shape, im_shape)]
-        upper_bound = [p-int((p-i)/2) for (p, i) in zip(pad_shape, im_shape)]
-        if n_dims == 2:
-            seg = seg[lower_bound[0]:upper_bound[0], lower_bound[1]:upper_bound[1]]
-        elif n_dims == 3:
-            seg = seg[lower_bound[0]:upper_bound[0], lower_bound[1]:upper_bound[1], lower_bound[2]:upper_bound[2]]
+        bounds = [int((p-i)/2) for (p, i) in zip(pad_shape, im_shape)]
+        bounds += [p + i for (p, i) in zip(bounds, im_shape)]
+        seg = edit_volumes.crop_volume_with_idx(seg, bounds)
 
     # align prediction back to first orientation
     if n_dims > 2:

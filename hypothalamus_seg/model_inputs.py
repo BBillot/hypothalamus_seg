@@ -39,7 +39,7 @@ def image_seg_generator(path_images,
 
         # build list of inputs of augmentation model
         list_inputs = [list_images, list_label_maps]
-        if batchsize > 1:  # concatenate individual input types if batchsize > 1
+        if batchsize > 1:  # concatenate each input type if batchsize > 1
             list_inputs = [np.concatenate(item, 0) for item in list_inputs]
         else:
             list_inputs = [item[0] for item in list_inputs]

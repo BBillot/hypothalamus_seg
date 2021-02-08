@@ -6,8 +6,8 @@ from keras.models import Model
 
 # third-party imports
 from ext.lab2im import utils
+from ext.lab2im import layers
 from ext.lab2im import edit_volumes
-from ext.lab2im import layers as l2i_layers
 from ext.lab2im import edit_tensors as l2i_et
 
 
@@ -40,56 +40,52 @@ def build_augmentation_model(im_shape,
     im_shape = utils.reformat_to_list(im_shape)
     n_dims, _ = utils.get_dims(im_shape)
     image_res = utils.reformat_to_list(image_res, length=n_dims)
-    if target_res is None:
-        target_res = image_res
-    else:
-        target_res = utils.reformat_to_list(target_res, length=n_dims)
+    target_res = image_res if target_res is None else utils.reformat_to_list(target_res, length=n_dims)
 
     # get shapes
     cropping_shape, output_shape = get_shapes(im_shape, output_shape, image_res, target_res, output_div_by_n)
     im_shape = im_shape + [n_channels]
 
     # create new_label_list and corresponding LUT to make sure that labels go from 0 to N-1
-    n_labels = label_list.shape[0]
     new_label_list, lut = utils.rearrange_label_list(label_list)
 
     # define model inputs
-    image_in = KL.Input(shape=im_shape, name='image_input')
-    labels_in = KL.Input(shape=im_shape[:-1] + [1], name='labels_input', dtype='int32')
+    image_input = KL.Input(shape=im_shape, name='image_input')
+    labels_input = KL.Input(shape=im_shape[:-1] + [1], name='labels_input', dtype='int32')
 
     # convert labels to new_label_list
-    labels = l2i_et.convert_labels(labels_in, lut)
+    labels = l2i_et.convert_labels(labels_input, lut)
 
     # flipping
     if flipping:
         if flip_rl_only:
-            labels, image = l2i_layers.RandomFlip(int(edit_volumes.get_ras_axes(aff, n_dims)[0]),
-                                                  [True, False], label_list, n_neutral_labels)([labels, image_in])
+            labels, image = layers.RandomFlip(int(edit_volumes.get_ras_axes(aff, n_dims)[0]),
+                                              [True, False], label_list, n_neutral_labels)([labels, image_input])
         else:
-            labels, image = l2i_layers.RandomFlip(None, [True, False], label_list, n_neutral_labels)([labels, image_in])
+            labels, image = layers.RandomFlip(None, [True, False], label_list, n_neutral_labels)([labels, image_input])
     else:
-        image = image_in
+        image = image_input
 
     # transform labels to soft prob. and concatenate them to the image
-    labels = KL.Lambda(lambda x: tf.one_hot(tf.cast(x[..., 0], dtype='int32'), depth=n_labels, axis=-1))(labels)
+    labels = KL.Lambda(lambda x: tf.one_hot(tf.cast(x[..., 0], dtype='int32'), depth=len(label_list), axis=-1))(labels)
     image = KL.concatenate([image, labels], axis=len(im_shape))
 
     # spatial deformation
     if (scaling_bounds is not False) | (rotation_bounds is not False) | (shearing_bounds is not False) | \
        (translation_bounds is not False) | (nonlin_std > 0) | enable_90_rotations:
         image._keras_shape = tuple(image.get_shape().as_list())
-        image = l2i_layers.RandomSpatialDeformation(scaling_bounds=scaling_bounds,
-                                                    rotation_bounds=rotation_bounds,
-                                                    shearing_bounds=shearing_bounds,
-                                                    translation_bounds=translation_bounds,
-                                                    enable_90_rotations=enable_90_rotations,
-                                                    nonlin_std=nonlin_std,
-                                                    nonlin_shape_factor=nonlin_shape_factor)(image)
+        image = layers.RandomSpatialDeformation(scaling_bounds=scaling_bounds,
+                                                rotation_bounds=rotation_bounds,
+                                                shearing_bounds=shearing_bounds,
+                                                translation_bounds=translation_bounds,
+                                                enable_90_rotations=enable_90_rotations,
+                                                nonlin_std=nonlin_std,
+                                                nonlin_shape_factor=nonlin_shape_factor)(image)
 
     # cropping
     if cropping_shape != im_shape[:-1]:
         image._keras_shape = tuple(image.get_shape().as_list())
-        image = l2i_layers.RandomCrop(cropping_shape)(image)
+        image = layers.RandomCrop(cropping_shape)(image)
 
     # resampling (image blurred separately)
     if cropping_shape != output_shape:
@@ -97,7 +93,7 @@ def build_augmentation_model(im_shape,
         split = KL.Lambda(lambda x: tf.split(x, [n_channels, -1], axis=len(im_shape)))(image)
         image = split[0]
         image._keras_shape = tuple(image.get_shape().as_list())
-        image = l2i_layers.GaussianBlur(sigma=sigma)(image)
+        image = layers.GaussianBlur(sigma=sigma)(image)
         image = KL.concatenate([image, split[-1]])
         image = l2i_et.resample_tensor(image, output_shape)
 
@@ -107,16 +103,16 @@ def build_augmentation_model(im_shape,
     # apply bias field
     if bias_field_std > 0:
         image._keras_shape = tuple(image.get_shape().as_list())
-        image = l2i_layers.BiasFieldCorruption(bias_field_std, bias_shape_factor, same_bias_for_all_channels)(image)
+        image = layers.BiasFieldCorruption(bias_field_std, bias_shape_factor, same_bias_for_all_channels)(image)
 
     # intensity augmentation
     if apply_intensity_augmentation:
         image._keras_shape = tuple(image.get_shape().as_list())
-        image = l2i_layers.IntensityAugmentation(noise_std, clip=False, normalise=True, norm_perc=0, gamma_std=0.5,
-                                                 separate_channels=augment_channels_separately)(image)
+        image = layers.IntensityAugmentation(noise_std, clip=False, normalise=True, norm_perc=0, gamma_std=0.5,
+                                             separate_channels=augment_channels_separately)(image)
 
     # build model
-    im_trans_model = Model(inputs=[image_in, labels_in], outputs=[image, labels])
+    im_trans_model = Model(inputs=[image_input, labels_input], outputs=[image, labels])
 
     return im_trans_model
 

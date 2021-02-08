@@ -46,8 +46,8 @@ def dice(x, y):
     return 2 * np.sum(x * y) / (np.sum(x) + np.sum(y))
 
 
-def surface_distances(x, y):
-    """Computes the maximum boundary distance (Haussdorf distance), and the average boundary distance of two masks.
+def surface_distances(x, y, hausdorff_percentile=1):
+    """Computes the maximum boundary distance (Haussdorff distance), and the average boundary distance of two masks.
     x and y should be boolean or 0/1 numpy arrays of the same size."""
 
     assert x.shape == y.shape, 'both inputs should have same size, had {} and {}'.format(x.shape, y.shape)
@@ -66,15 +66,19 @@ def surface_distances(x, y):
     x_dists_to_y = y_dist[x_edge == 1]
     y_dists_to_x = x_dist[y_edge == 1]
 
+    # set distances to maximum volume shape if they are not defined
+    if (len(x_dists_to_y) == 0) | (len(y_dists_to_x) == 0):
+        return max(x.shape), max(x.shape)
+
     # find max distance from the 2 surfaces
-    if x_dists_to_y.shape[0] > 0:
+    if hausdorff_percentile == 1:
         x_max_dist_to_y = np.max(x_dists_to_y)
-    else:
-        x_max_dist_to_y = max(x.shape)
-    if y_dists_to_x.shape[0] > 0:
         y_max_dist_to_x = np.max(y_dists_to_x)
+        max_dist = np.maximum(x_max_dist_to_y, y_max_dist_to_x)
     else:
-        y_max_dist_to_x = max(x.shape)
+        dists = np.sort(np.concatenate([x_dists_to_y, y_dists_to_x]))
+        idx_max = min(int(dists.shape[0] * hausdorff_percentile), dists.shape[0] - 1)
+        max_dist = dists[idx_max]
 
     # find average distance between 2 surfaces
     if x_dists_to_y.shape[0] > 0:
@@ -85,16 +89,18 @@ def surface_distances(x, y):
         y_mean_dist_to_x = np.mean(y_dists_to_x)
     else:
         y_mean_dist_to_x = max(x.shape)
+    mean_dist = (x_mean_dist_to_y + y_mean_dist_to_x) / 2
 
-    return np.maximum(x_max_dist_to_y, y_max_dist_to_x), (x_mean_dist_to_y + y_mean_dist_to_x) / 2
+    return max_dist, mean_dist
 
 
 def compute_non_parametric_paired_test(dice_ref, dice_compare, eval_indices=None, alternative='two-sided'):
-    """Compute non-parametric paired t-tests between two sets of scores.
-    :param dice_ref: numpy array with scores, rows represent structures, and columns represent subjects.
+    """Compute non-parametric paired t-tests between two sets of Dice scores.
+    :param dice_ref: numpy array with Dice scores, rows represent structures, and columns represent subjects.
     Taken as reference for one-sided tests.
     :param dice_compare: numpy array of the same format as dice_ref.
-    :param eval_indices: (optional) list or 1d array indicating the row indices of structures to run the tests for
+    :param eval_indices: (optional) list or 1d array indicating the row indices of structures to run the tests for.
+    Default is None, for which p-values are computed for all rows.
     :param alternative: (optional) The alternative hypothesis to be tested, Cab be 'two-sided', 'greater', 'less'.
     :return: 1d numpy array, with p-values for all tests on evaluated structures, as well as an additionnal test for
     average scores (last value of the array). The average score is computed only on the evaluation structures.
@@ -106,18 +112,24 @@ def compute_non_parametric_paired_test(dice_ref, dice_compare, eval_indices=None
 
     # loop over all evaluation label values
     pvalues = list()
-    for idx in eval_indices:
+    if len(eval_indices) > 1:
+        for idx in eval_indices:
 
-        x = dice_ref[idx, :]
-        y = dice_compare[idx, :]
+            x = dice_ref[idx, :]
+            y = dice_compare[idx, :]
+            _, p = wilcoxon(x, y, alternative=alternative)
+            pvalues.append(p)
+
+        # average score
+        x = np.mean(dice_ref[eval_indices, :], axis=0)
+        y = np.mean(dice_compare[eval_indices, :], axis=0)
         _, p = wilcoxon(x, y, alternative=alternative)
         pvalues.append(p)
 
-    # average score
-    x = np.mean(dice_ref[eval_indices, :], axis=0)
-    y = np.mean(dice_compare[eval_indices, :], axis=0)
-    _, p = wilcoxon(x, y, alternative=alternative)
-    pvalues.append(p)
+    else:
+        # average score
+        _, p = wilcoxon(dice_ref, dice_compare, alternative=alternative)
+        pvalues.append(p)
 
     return np.array(pvalues)
 
@@ -141,19 +153,21 @@ def cohens_d(volumes_x, volumes_y):
 
 def reproducibility_test(gt_dir,
                          seg_dir,
-                         result_dir,
                          label_list,
+                         result_dir=None,
+                         cropping_margin_around_gt=10,
                          verbose=True):
 
     """This function computes evaluation metrics (hard dice scores, average boundary distance, Hausdorff distance) 
     between two sets of labels maps in gt_dir (ground truth) and seg_dir (typically predictions).
-    Labels maps are matched by sorting order.
+    Labels maps in both folders are matched by sorting order.
     :param gt_dir: path of directory with gt label maps
-    :param seg_dir: path of directory with label maps to compare to gt_dir. 
-    The two sets of segmentations are matched by sorting order.
-    :param result_dir: path of directory where result matrices will be saved.
+    :param seg_dir: path of directory with label maps to compare to gt_dir. Matched to gt label maps by sorting order.
     :param label_list: list of label values for which to compute evaluation metrics. Can be a sequence, a 1d numpy
     array, or the path to such array.
+    :param result_dir: path of folder where result matrices will be saved. Default is None, where arrays are not saved.
+    :param cropping_margin_around_gt: (optional) margin by which to crop around the gt volumes.
+    If None, no cropping is performed.
     :param verbose: (optional) whether to print out info about the remaining number of cases.
     :return: 3 matrices, each containing the results of one metric for all images.
     Rows of these matrices correspond to a different label value (in same order as in path_label_list), and each column
@@ -179,7 +193,7 @@ def reproducibility_test(gt_dir,
     dice_coefs = np.zeros((label_list.shape[0] + 1, len(path_segs)))
 
     # loop over segmentations
-    for idx, (path_seg, path_gt) in enumerate(zip(path_segs, path_gt_labels)):
+    for idx, (path_gt, path_seg) in enumerate(zip(path_gt_labels, path_segs)):
         if verbose:
             utils.print_loop_info(idx, len(path_segs), 10)
 
@@ -187,8 +201,9 @@ def reproducibility_test(gt_dir,
         gt_labels = utils.load_volume(path_gt, dtype='int')
         seg = utils.load_volume(path_seg, dtype='int')
         # crop images
-        gt_labels, cropping = edit_volumes.crop_volume_around_region(gt_labels, margin=10)
-        seg = edit_volumes.crop_volume_with_idx(seg, cropping)
+        if cropping_margin_around_gt is not None:
+            gt_labels, cropping = edit_volumes.crop_volume_around_region(gt_labels, margin=cropping_margin_around_gt)
+            seg = edit_volumes.crop_volume_with_idx(seg, cropping)
         # extract list of unique labels
         unique_gt_labels = np.unique(gt_labels)
         unique_seg_labels = np.unique(seg)
@@ -197,9 +212,7 @@ def reproducibility_test(gt_dir,
         # compute max/mean surface distances for all nuclei
         for index, label in enumerate(label_list):
             if (label in unique_gt_labels) & (label in unique_seg_labels):
-                temp_gt = (gt_labels == label) * 1
-                temp_seg = (seg == label) * 1
-                max_dists[index, idx], mean_dists[index, idx] = surface_distances(temp_gt, temp_seg)
+                max_dists[index, idx], mean_dists[index, idx] = surface_distances(gt_labels == label, seg == label)
             else:
                 max_dists[index, idx] = float('inf')
                 mean_dists[index, idx] = float('inf')
@@ -210,8 +223,10 @@ def reproducibility_test(gt_dir,
         dice_coefs[-1, idx] = dice(temp_gt, temp_seg)
 
     # write dice and distances results
-    np.save(os.path.join(result_dir, 'dice.npy'), dice_coefs)
-    np.save(os.path.join(result_dir, 'max_dist.npy'), max_dists)
-    np.save(os.path.join(result_dir, 'mean_dist.npy'), mean_dists)
+    if result_dir is not None:
+        utils.mkdir(result_dir)
+        np.save(os.path.join(result_dir, 'dice.npy'), dice_coefs)
+        np.save(os.path.join(result_dir, 'max_dist.npy'), max_dists)
+        np.save(os.path.join(result_dir, 'mean_dist.npy'), mean_dists)
 
     return dice_coefs, max_dists, mean_dists
