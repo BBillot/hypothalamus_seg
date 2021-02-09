@@ -106,11 +106,12 @@ def predict(path_images,
     # perform segmentation
     net = None
     previous_model_input_shape = None
+    loop_info = utils.LoopInfo(len(images_to_segment), 10, 'processing', True)
     for idx, (path_image, path_segmentation, path_posterior) in enumerate(zip(images_to_segment,
                                                                               path_segmentations,
                                                                               path_posteriors)):
         if verbose:
-            utils.print_loop_info(idx, len(images_to_segment), 10)
+            loop_info.update(idx)
 
         # preprocess image and get information
         image, aff, h, im_res, n_channels, n_dims, shape, pad_shape, crop_idx = \

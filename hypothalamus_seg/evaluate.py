@@ -193,9 +193,10 @@ def reproducibility_test(gt_dir,
     dice_coefs = np.zeros((label_list.shape[0] + 1, len(path_segs)))
 
     # loop over segmentations
+    loop_info = utils.LoopInfo(len(path_segs), 10, 'processing')
     for idx, (path_gt, path_seg) in enumerate(zip(path_gt_labels, path_segs)):
         if verbose:
-            utils.print_loop_info(idx, len(path_segs), 10)
+            loop_info.update(idx)
 
         # load gt labels and segmentation
         gt_labels = utils.load_volume(path_gt, dtype='int')
