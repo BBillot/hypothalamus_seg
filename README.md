@@ -169,8 +169,9 @@ Additional optional flags are also available:
 - `--threads`: to indicate the number of cores to be used if running on a CPU (example: `--threads 3` to run on 3 cores).
  This value defaults to 1, but we recommand increasing it for faster analysis.
 - `--cpu`: to enforce the code to run on the CPU, even if a GPU is available.
-- `--crop`: to run the code on a smaller patch of the provided shape (example: `--crop 160` to run on 3 cores). The patches are extracted around the centre of 
-the inputs. This value defaults to 184, but can be decreased for faster analysis.
+- `--crop`: to run the code on a smaller patch of the provided shape (example: `--crop 160` to run on 160<sup>3</sup> 
+patches). The patches are extracted around the centre of the inputs. This value defaults to 184, but it can be decreased
+for faster analysis or to fit in your GPU.
 
 \
 You can have access to these explanations directly by typing once in `<path to hypothalamus_seg>`:
