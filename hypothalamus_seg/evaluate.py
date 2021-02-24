@@ -24,10 +24,8 @@ def fast_dice(x, y, labels):
         labels_sorted = np.sort(labels)
 
         # build bins for histograms
-        m = np.minimum(np.min(x), np.min(y))
-        M = np.maximum(np.max(x), np.max(y))
         label_edges = np.sort(np.concatenate([labels_sorted - 0.1, labels_sorted + 0.1]))
-        label_edges = np.insert(label_edges, [0, len(label_edges)], [m - 0.1, M + 0.1])
+        label_edges = np.insert(label_edges, [0, len(label_edges)], [labels_sorted[0] - 0.1, labels_sorted[-1] + 0.1])
 
         # compute Dice and re-arange scores in initial order
         hst = np.histogram2d(x.flatten(), y.flatten(), bins=label_edges)[0]
@@ -51,6 +49,19 @@ def surface_distances(x, y, hausdorff_percentile=1):
     x and y should be boolean or 0/1 numpy arrays of the same size."""
 
     assert x.shape == y.shape, 'both inputs should have same size, had {} and {}'.format(x.shape, y.shape)
+    n_dims = len(x.shape)
+
+    # crop x and y around ROI
+    _, crop_x = edit_volumes.crop_volume_around_region(x)
+    _, crop_y = edit_volumes.crop_volume_around_region(y)
+
+    # set distances to maximum volume shape if they are not defined
+    if (crop_x is None) | (crop_y is None):
+        return max(x.shape), max(x.shape)
+
+    crop = np.concatenate([np.minimum(crop_x, crop_y)[:n_dims], np.maximum(crop_x, crop_y)[n_dims:]])
+    x = edit_volumes.crop_volume_with_idx(x, crop)
+    y = edit_volumes.crop_volume_with_idx(y, crop)
 
     # detect edge
     x_dist_int = distance_transform_edt(x * 1)
@@ -65,10 +76,6 @@ def surface_distances(x, y, hausdorff_percentile=1):
     # find distances from the 2 surfaces
     x_dists_to_y = y_dist[x_edge == 1]
     y_dists_to_x = x_dist[y_edge == 1]
-
-    # set distances to maximum volume shape if they are not defined
-    if (len(x_dists_to_y) == 0) | (len(y_dists_to_x) == 0):
-        return max(x.shape), max(x.shape)
 
     # find max distance from the 2 surfaces
     if hausdorff_percentile == 1:
@@ -154,80 +161,136 @@ def cohens_d(volumes_x, volumes_y):
 def reproducibility_test(gt_dir,
                          seg_dir,
                          label_list,
-                         result_dir=None,
-                         cropping_margin_around_gt=10,
+                         compute_distances=False,
+                         compute_score_whole_structure=False,
+                         path_dice=None,
+                         path_hausdorff=None,
+                         path_mean_distance=None,
+                         crop_margin_around_gt=10,
+                         recompute=True,
                          verbose=True):
-
-    """This function computes evaluation metrics (hard dice scores, average boundary distance, Hausdorff distance) 
-    between two sets of labels maps in gt_dir (ground truth) and seg_dir (typically predictions).
-    Labels maps in both folders are matched by sorting order.
+    """This function computes Dice scores between two sets of labels maps in gt_dir (ground truth) and seg_dir
+    (typically predictions). Labels maps in both folders are matched by sorting order.
     :param gt_dir: path of directory with gt label maps
     :param seg_dir: path of directory with label maps to compare to gt_dir. Matched to gt label maps by sorting order.
     :param label_list: list of label values for which to compute evaluation metrics. Can be a sequence, a 1d numpy
     array, or the path to such array.
-    :param result_dir: path of folder where result matrices will be saved. Default is None, where arrays are not saved.
-    :param cropping_margin_around_gt: (optional) margin by which to crop around the gt volumes.
-    If None, no cropping is performed.
+    :param compute_distances: (optional) whether to compute distances (Hausdorff and mean distance) between the surfaces
+    of GT and predicted labels. Default is False.
+    :param compute_score_whole_structure: (optional) whether to also compute the selected scores for the whole segmented
+    structure (i.e. scores are computed for a single structure obtained by regrouping all non-zero values). If True, the
+    resulting scores are added as an extra row to the result matrices. Default is False.
+    :param path_dice: path where the resulting Dice will be writen as numpy array.
+    Default is None, where the array is not saved.
+    :param path_hausdorff: path where the resulting Hausdorff distances will be writen as numpy array (only if
+    compute_distances is True). Default is None, where the array is not saved.
+    :param path_mean_distance: path where the resulting mean distances will be writen as numpy array (only if
+    compute_distances is True). Default is None, where the array is not saved.
+    :param crop_margin_around_gt: (optional) margin by which to crop around the gt volumes, in order to copute the
+    scores more efficiently. If None, no cropping is performed.
+    :param recompute: (optional) whether to recompute the already existing results. Default is True.
     :param verbose: (optional) whether to print out info about the remaining number of cases.
-    :return: 3 matrices, each containing the results of one metric for all images.
-    Rows of these matrices correspond to a different label value (in same order as in path_label_list), and each column
-    represent a different subject (in hte same order as gt_dir). An additional row is added to every matrix,
-    representing the score obtained by all non-zero labels.
+    :return: numpy array containing all Dice scores (labels in rows, subjects in columns). Also returns numpy arrays
+    with the same structures for Hausdorff and mean distances if compute_distances is True.
     """
 
-    # create result folder
-    utils.mkdir(result_dir)
+    # check whether to recompute
+    compute_dice = not os.path.isfile(path_dice) if (path_dice is not None) else True
+    if compute_distances:
+        compute_hausdorff = not os.path.isfile(path_hausdorff) if (path_hausdorff is not None) else True
+        compute_mean_dist = not os.path.isfile(path_mean_distance) if (path_mean_distance is not None) else True
+    else:
+        compute_hausdorff = compute_mean_dist = False
 
-    # get list label maps to compare
-    path_gt_labels = utils.list_images_in_folder(gt_dir)
-    path_segs = utils.list_images_in_folder(seg_dir)
-    if len(path_gt_labels) != len(path_segs):
-        print('different number of files in data folders, had {} and {}'.format(len(path_gt_labels), len(path_segs)))
+    if compute_dice | compute_hausdorff | compute_mean_dist | recompute:
 
-    # load labels list
-    label_list, _ = utils.get_list_labels(label_list, labels_dir=gt_dir)
+        # get list label maps to compare
+        path_gt_labels = utils.list_images_in_folder(gt_dir)
+        path_segs = utils.list_images_in_folder(seg_dir)
+        if len(path_gt_labels) != len(path_segs):
+            print('gt and segmentation folders must have the same amount of label maps.')
 
-    # initialise result matrices
-    max_dists = np.zeros((label_list.shape[0] + 1, len(path_segs)))
-    mean_dists = np.zeros((label_list.shape[0] + 1, len(path_segs)))
-    dice_coefs = np.zeros((label_list.shape[0] + 1, len(path_segs)))
+        # load labels list
+        label_list, _ = utils.get_list_labels(label_list, labels_dir=gt_dir)
+        n_labels = len(label_list)
 
-    # loop over segmentations
-    loop_info = utils.LoopInfo(len(path_segs), 10, 'processing')
-    for idx, (path_gt, path_seg) in enumerate(zip(path_gt_labels, path_segs)):
-        if verbose:
-            loop_info.update(idx)
+        # initialise result matrices
+        if compute_score_whole_structure:
+            max_dists = np.zeros((n_labels + 1, len(path_segs)))
+            mean_dists = np.zeros((n_labels + 1, len(path_segs)))
+            dice_coefs = np.zeros((n_labels + 1, len(path_segs)))
+        else:
+            max_dists = np.zeros((n_labels, len(path_segs)))
+            mean_dists = np.zeros((n_labels, len(path_segs)))
+            dice_coefs = np.zeros((n_labels, len(path_segs)))
 
-        # load gt labels and segmentation
-        gt_labels = utils.load_volume(path_gt, dtype='int')
-        seg = utils.load_volume(path_seg, dtype='int')
-        # crop images
-        if cropping_margin_around_gt is not None:
-            gt_labels, cropping = edit_volumes.crop_volume_around_region(gt_labels, margin=cropping_margin_around_gt)
-            seg = edit_volumes.crop_volume_with_idx(seg, cropping)
-        # extract list of unique labels
-        unique_gt_labels = np.unique(gt_labels)
-        unique_seg_labels = np.unique(seg)
-        # compute dice scores
-        dice_coefs[:-1, idx] = fast_dice(gt_labels, seg, label_list)
-        # compute max/mean surface distances for all nuclei
-        for index, label in enumerate(label_list):
-            if (label in unique_gt_labels) & (label in unique_seg_labels):
-                max_dists[index, idx], mean_dists[index, idx] = surface_distances(gt_labels == label, seg == label)
+        # loop over segmentations
+        loop_info = utils.LoopInfo(len(path_segs), 10, 'evaluating')
+        for idx, (path_gt, path_seg) in enumerate(zip(path_gt_labels, path_segs)):
+            if verbose:
+                loop_info.update(idx)
+
+            # load gt labels and segmentation
+            gt_labels = utils.load_volume(path_gt, dtype='int')
+            seg = utils.load_volume(path_seg, dtype='int')
+
+            # crop images
+            if crop_margin_around_gt is not None:
+                gt_labels, cropping = edit_volumes.crop_volume_around_region(gt_labels, margin=crop_margin_around_gt)
+                seg = edit_volumes.crop_volume_with_idx(seg, cropping)
+
+            # compute Dice scores
+            dice_coefs[:n_labels, idx] = fast_dice(gt_labels, seg, label_list)
+
+            # compute Dice scores for whole structures
+            if compute_score_whole_structure:
+                temp_gt = (gt_labels > 0) * 1
+                temp_seg = (seg > 0) * 1
+                dice_coefs[-1, idx] = dice(temp_gt, temp_seg)
             else:
-                max_dists[index, idx] = float('inf')
-                mean_dists[index, idx] = float('inf')
-        # compute dice, max and mean distances for whole hypothalamus
-        temp_gt = (gt_labels > 0) * 1
-        temp_seg = (seg > 0) * 1
-        max_dists[-1, idx], mean_dists[-1, idx] = surface_distances(temp_gt, temp_seg)
-        dice_coefs[-1, idx] = dice(temp_gt, temp_seg)
+                temp_gt = temp_seg = None
 
-    # write dice and distances results
-    if result_dir is not None:
-        utils.mkdir(result_dir)
-        np.save(os.path.join(result_dir, 'dice.npy'), dice_coefs)
-        np.save(os.path.join(result_dir, 'max_dist.npy'), max_dists)
-        np.save(os.path.join(result_dir, 'mean_dist.npy'), mean_dists)
+            # compute average and Hausdorff distances
+            if compute_distances:
 
-    return dice_coefs, max_dists, mean_dists
+                # compute unique label values
+                unique_gt_labels = np.unique(gt_labels)
+                unique_seg_labels = np.unique(seg)
+
+                # compute max/mean surface distances for all labels
+                for index, label in enumerate(label_list):
+                    if (label in unique_gt_labels) & (label in unique_seg_labels):
+                        mask_gt = np.where(gt_labels == label, True, False)
+                        mask_seg = np.where(seg == label, True, False)
+                        max_dists[index, idx], mean_dists[index, idx] = surface_distances(mask_gt, mask_seg)
+                    else:
+                        max_dists[index, idx] = max(gt_labels.shape)
+                        mean_dists[index, idx] = max(gt_labels.shape)
+
+                # compute max/mean distances for whole structure
+                if compute_score_whole_structure:
+                    max_dists[-1, idx], mean_dists[-1, idx] = surface_distances(temp_gt, temp_seg)
+
+        # write results
+        if path_dice is not None:
+            utils.mkdir(os.path.dirname(path_dice))
+            np.save(path_dice, dice_coefs)
+        if compute_distances and path_hausdorff is not None:
+            utils.mkdir(os.path.dirname(path_hausdorff))
+            np.save(path_hausdorff, max_dists)
+        if compute_distances and path_mean_distance is not None:
+            utils.mkdir(os.path.dirname(path_mean_distance))
+            np.save(path_mean_distance, mean_dists)
+
+    else:
+        dice_coefs = np.load(path_dice)
+        if compute_distances:
+            max_dists = np.load(path_hausdorff)
+            mean_dists = np.load(path_mean_distance)
+        else:
+            max_dists = mean_dists = None
+
+    if compute_distances:
+        return dice_coefs, max_dists, mean_dists
+    else:
+        return dice_coefs, None, None
