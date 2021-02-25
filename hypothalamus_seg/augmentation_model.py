@@ -108,7 +108,7 @@ def build_augmentation_model(im_shape,
     # intensity augmentation
     if apply_intensity_augmentation:
         image._keras_shape = tuple(image.get_shape().as_list())
-        image = layers.IntensityAugmentation(noise_std, clip=False, normalise=True, norm_perc=0, gamma_std=0.5,
+        image = layers.IntensityAugmentation(noise_std, gamma_std=0.5,
                                              separate_channels=augment_channels_separately)(image)
 
     # build model
