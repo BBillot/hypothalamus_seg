@@ -83,7 +83,7 @@ Moreover, this repository relies on several external python packages (already in
 In order to download the segmentation tool (but not the code), click on one of the following links (depending on your 
 operating system):
 - Linux: [hypo_seg_linux.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EYC4OStPsd9KlBVx8h2G2VcBEBiwA62LkSxfot9SjdvtYA?e=4RFsHq)
-- Mac: [hypo_seg_mac.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/ERaTrZUzUr9Lrdgxw5cZdgcB4VItQAaQdM8lgfvTi6N-mw?e=xkdOtC)
+- Mac: [hypo_seg_mac.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/Ea0PwUCQP7FMn0CtVlhDEW0Bx_I2e16ysnKAvpig8LV8gA?e=bpVhif)
 - Windows: [hypo_seg_windows.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EZBjLVIY3RdNkCY3JX1rq-0BvoWqPjAfFrUb_pp_UqKlTw?e=2xgZUz)
 
 This will take you to a OneDrive page where you can download a zip file by directly clicking on `Download` (top left). \
