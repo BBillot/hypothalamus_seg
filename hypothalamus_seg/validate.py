@@ -30,6 +30,8 @@ def validate_training(image_dir,
                       unet_feat_count=24,
                       feat_multiplier=2,
                       activation='elu',
+                      compute_distances=True,
+                      compute_score_whole_structure=True,
                       recompute=True):
     """This function validates models saved at different epochs of the same training.
     All models are assumed to be in the same folder.contained in models_dir.
@@ -56,6 +58,10 @@ def validate_training(image_dir,
     :param unet_feat_count: (optional) number of feature maps for the first level. Default is 24.
     :param feat_multiplier: (optional) multiply the number of feature by this nummber at each new level. Default is 1.
     :param activation: (optional) activation function. Can be 'elu', 'relu'.
+    :param compute_distances: (optional) whether to add Hausdorff and mean surface distance evaluations to the default
+    Dice evaluation. Default is True.
+    :param compute_score_whole_structure: (optional) whether to compute the evaluation scores for another structure
+    obtained by regrouping all segmented regions. Default is True.
     :param recompute: (optional) whether to recompute result files even if they already exists."""
 
     # create result folder
@@ -89,6 +95,8 @@ def validate_training(image_dir,
                     activation=activation,
                     gt_folder=gt_dir,
                     evaluation_label_list=evaluation_label_list,
+                    compute_distances=compute_distances,
+                    compute_score_whole_structure=compute_score_whole_structure,
                     recompute=recompute,
                     verbose=False)
 

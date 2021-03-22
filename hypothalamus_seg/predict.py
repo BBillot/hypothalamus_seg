@@ -2,10 +2,8 @@
 import os
 import csv
 import numpy as np
-from copy import deepcopy
 import keras.layers as KL
 from keras.models import Model
-from scipy.ndimage import label
 
 # project imports
 from hypothalamus_seg.evaluate import reproducibility_test
@@ -38,6 +36,7 @@ def predict(path_images,
             gt_folder=None,
             evaluation_label_list=None,
             compute_distances=True,
+            compute_score_whole_structure=True,
             recompute=True,
             verbose=True):
     """
@@ -79,6 +78,10 @@ def predict(path_images,
     :param evaluation_label_list: (optional) if gt_folder is True you can evaluate the Dice scores on a subset of the
     segmentation labels, by providing another label list here. Can be a sequence, a 1d numpy array, or the path to a
     numpy 1d array. Default is the same as segmentation_label_list.
+    :param compute_distances: (optional) whether to add Hausdorff and mean surface distance evaluations to the default
+    Dice evaluation. Default is True.
+    :param compute_score_whole_structure: (optional) whether to compute the evaluation scores for another structure
+    obtained by regrouping all segmented regions. Default is True.
     :param recompute: (optional) whether to recompute segmentations that were already computed. This also applies to
     Dice scores, if gt_folder is not None. Default is True.
     :param verbose: (optional) whether to print out info about the remaining number of cases.
@@ -179,7 +182,7 @@ def predict(path_images,
                              eval_folder,
                              evaluation_label_list,
                              compute_distances=compute_distances,
-                             compute_score_whole_structure=True,
+                             compute_score_whole_structure=compute_score_whole_structure,
                              path_dice=os.path.join(eval_folder, 'dice.npy'),
                              path_hausdorff=os.path.join(eval_folder, 'hausdorff.npy'),
                              path_mean_distance=os.path.join(eval_folder, 'mean_distance.npy'),
