@@ -60,9 +60,9 @@ def build_augmentation_model(im_shape,
     if flipping:
         if flip_rl_only:
             labels, image = layers.RandomFlip(int(edit_volumes.get_ras_axes(aff, n_dims)[0]),
-                                              [True, False], label_list, n_neutral_labels)([labels, image_input])
+                                              [True, False], new_label_list, n_neutral_labels)([labels, image_input])
         else:
-            labels, image = layers.RandomFlip(None, [True, False], label_list, n_neutral_labels)([labels, image_input])
+            labels, image = layers.RandomFlip(None, [True, False], new_label_list, n_neutral_labels)([labels, image_input])
     else:
         image = image_input
 
