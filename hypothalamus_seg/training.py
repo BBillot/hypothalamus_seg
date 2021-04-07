@@ -74,7 +74,7 @@ def training(image_dir,
     By default, this is computed by taking all the label values in the training label maps.
     :param save_label_list: (optional) path where to write the computed list of segmentation labels.
     :param n_neutral_labels: (optional) number of non-sided labels in label_list. This is used for determining which
-    label values to swap when right/left flipping the training examples. Default is 1.
+    label values to swap when right/left flipping the training examples. Default is 1 (to account for the background).
     :param batchsize: (optional) number of images per mini-batch. Default is 1.
     :param target_res: (optional) target resolution at which to produce the segmentation label maps. The training data
     will be resampled to this resolution before being run through the network. If None, no resampling is performed.

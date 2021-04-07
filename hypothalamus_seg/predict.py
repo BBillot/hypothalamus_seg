@@ -427,6 +427,6 @@ def postprocess(prediction, pad_shape, im_shape, crop, n_dims, labels, keep_bigg
     # align prediction back to first orientation
     if n_dims > 2:
         seg = edit_volumes.align_volume_to_ref(seg, np.eye(4), aff_ref=aff)
-        posteriors = edit_volumes.align_volume_to_ref(posteriors, np.eye(4), aff_ref=aff)
+        posteriors = edit_volumes.align_volume_to_ref(posteriors, np.eye(4), aff_ref=aff, n_dims=n_dims)
 
     return seg, posteriors
