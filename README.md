@@ -8,7 +8,7 @@ B. Billot, M. Bocchetta, E. Todd, A. V. Dalca, J. D. Rohrer, J. E. Iglesias\
 NeuroImage (in press)
 
 \
-**IMPORTANT**: any volume analysis made by downloaded this code before the **17/11/2020** will have to be rerun, as we 
+**IMPORTANT**: any volume analysis made with this code downloaded before the **17/11/2020** will have to be rerun, as we 
 noticed a problem in the volume computation. This issue has now been fixed, and the compile code 
 (distributed in zip files) has been updated. This does not concern the segmentations, which are left unchanged.
 
@@ -17,11 +17,11 @@ This tool is now available in the development version of **[FreeSurfer](https://
 See how to use the FreeSurfer version [here](https://surfer.nmr.mgh.harvard.edu/fswiki/HypothalamicSubunits).
 
 \
-This repository enables automated segmentation of the hypothalamus and its associated subunits in T1-weighted scans of 
-approximatively 1mm isotropic resolution. \
-The presented tool is based on a convolutional neural network, which allows to retrieve segmentations in a very short 
+This repository enables automated segmentation of the hypothalamus and its associated subunits in **T1-weighted scans of 
+approximatively 1mm isotropic resolution**. \
+The presented tool is based on a convolutional neural network, which outputs segmentations in a very short 
 processing time (around 10 seconds with a CPU, less than a second with a GPU). \
-The segmentation model was trained by applying aggressive data augmentation, which makes it robust against variability 
+The network was trained by applying aggressive data augmentation, which makes it robust against variability 
 in acquisition parameters (sequence, platform, head positioning), and in anatomy (e.g. atrophy patterns linked to 
 ageing or different pathologies).
 
@@ -52,8 +52,8 @@ tuberomamillary nucleus (TMN) \
 **Tubular superior**: dorsomedial nucleus; PVN; lateral hypothalamus
 
 \
-The following figure illustrates two segmentation examples in coronal slices obtained by this model for a control 
-subject, and a subject diagnosed with Alzheimer's disease. Subunit colours are indicated by the table above.
+The following figure shows two segmentation examples (in coronal slices) obtained by this tool for a control 
+subject and a subject diagnosed with Alzheimer's disease.
 
 ![Segmentation examples](data/hypo.png)
 
@@ -125,7 +125,7 @@ with:
 ```
 git clone https://github.com/BBillot/hypothalamus_seg.git
 ```
-This code includes functions to predict, and evaluate the trained models. We also provide scripts to call the training
+This code includes functions to predict and evaluate the trained models. We also provide scripts to call the training
 and predicting functions from a terminal window (see [scripts](scripts)). \
 See the Dependencies section for further details on the requirements.
 
@@ -156,7 +156,7 @@ Depending on your operatin system, you can then simply segment images by calling
 ```
 where (in all cases):
 - `<image>` is the path to an image to segment. \
-This can also be a folder, in which case all the image inside that folder will be segmented.
+This can also be a folder, in which case all the images inside that folder will be segmented.
 - `<segmentation>` is the path where the output segmentation will be saved. \
 This must be a folder if `<path image>` designates a folder.
 - `<posteriors>` (optional) is the path where the posteriors (given as soft probability maps) will be saved. \
@@ -180,7 +180,12 @@ You can have access to these explanations directly by typing once in `<path to h
 ./hypo_seg.exe -h    # In Windows
 ```
 
-**Important**: If you wish to run this tool on several images, we recommend that you put them in a single folder and
+**Important 1**: As specified above, this tool can segment T1-weighted scans at approximately 1mm isotropic resolution
+(i.e. between 0.85mm and 1.15mm). If the resolution of your images is not in this range (e.g. HCP data at 0.7mm 
+resolution), please resample them (e.g. with FreeSurfer's command `mri_convert`) to 1mm isotropic resolution before 
+using this tool.
+
+**Important 2**: If you wish to run this tool on several images, we recommend that you put them in a single folder and
 run hypothalamus_seg on this folder, rather than calling it individually on each image. That way you can save time by
 avoiding to setup all the required libraries for each image, which typically takes 60% of the runtime for the CPU 
 version, and more than 90% for the GPU version.
