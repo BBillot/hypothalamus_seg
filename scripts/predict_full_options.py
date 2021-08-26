@@ -23,9 +23,6 @@ parser.add_argument("--padding", type=int, dest="padding", default=None,
                     help="margin to pad images with before prediction. Default is no padding.")
 parser.add_argument("--cropping", type=int, dest="cropping", default=None,
                     help="crop images to this size before prediction. Default is no cropping.")
-parser.add_argument("--resample", type=float, dest="resample", default=None,
-                    help="resolution at which to resample the images before prediction. "
-                         "Segmentations will then be resampled back to native resolution. Default is no resampling.")
 parser.add_argument("--smoothing", type=float, dest="sigma_smoothing", default=0,
                     help="std dev of Gaussian kernel to smooth the predictions.")
 parser.add_argument("--biggest_component", action='store_true', dest="keep_biggest_component",
@@ -42,6 +39,8 @@ parser.add_argument("--activation", type=str, dest="activation", default='elu', 
 # Evaluation parameters
 parser.add_argument("--gt_folder", type=str, default=None, dest="gt_folder",
                     help="folder with ground truth segmentations for evaluation.")
+parser.add_argument("--eval_label_list", type=str, dest="evaluation_label_list", default=None,
+                    help="labels to evaluate Dice scores on if gt is provided. Default is the same as label_list.")
 
 args = parser.parse_args()
 predict(**vars(args))

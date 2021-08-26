@@ -12,8 +12,6 @@ parser.add_argument("model_dir", type=str, help="directory where models will be 
 # Output-related parameters
 parser.add_argument("--label_list", type=str, default=None, dest="path_label_list",
                     help="path of numy array with segmentation label values")
-parser.add_argument("--save_label_list", type=str, default=None, dest="save_label_list",
-                    help="path where to save the label list, if not initially provided")
 parser.add_argument("--n_neutral_labels", type=int, default=1, dest="n_neutral_labels",
                     help="number of non-sided labels, default is 1")
 parser.add_argument("--batchsize", type=int, dest="batchsize", default=1, help="batch size")
@@ -53,7 +51,6 @@ parser.add_argument("--conv_size", type=int, dest="conv_size", default=3, help="
 parser.add_argument("--unet_features", type=int, dest="unet_feat_count", default=24, help="features of the first layer")
 parser.add_argument("--feat_mult", type=int, dest="feat_multiplier", default=2,
                     help="number by which to multiply the number of features at each level")
-parser.add_argument("--dropout", type=float, dest="dropout", default=0, help="dropout probability")
 parser.add_argument("--activation", type=str, dest="activation", default='elu', help="activation function")
 
 # training parameters

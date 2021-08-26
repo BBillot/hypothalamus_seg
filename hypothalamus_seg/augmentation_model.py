@@ -29,41 +29,99 @@ def build_augmentation_model(im_shape,
                              translation_bounds=False,
                              nonlin_std=3.,
                              nonlin_shape_factor=.0625,
-                             bias_field_std=.3,
-                             bias_shape_factor=0.025,
+                             bias_field_std=.5,
+                             bias_shape_factor=.025,
                              same_bias_for_all_channels=False,
                              apply_intensity_augmentation=True,
                              noise_std=1.,
                              augment_channels_separately=True):
+    """
+    This function builds a keras/tensorflow model to perform spatial and intensity augmentation of the input image and
+    labels map. The model returns:
+        -the augmented image normalised between 0 and 1.
+        -the corresponding label map, under the form of soft probability maps for each label in label_list.
+    # IMPORTANT !!!
+    # Each time we provide a parameter with separate values for each axis (e.g. with a numpy array or a sequence),
+    # these values refer to the RAS axes.
+    :param im_shape: shape of the input images. Can be a sequence or a 1d numpy array.
+    :param n_channels: number of channels of the input images.
+    :param label_list: (optional) list of the label values to be segmented.
+    If not None, can be a sequence or a 1d numpy array. It should be organised as follows: background label first, then
+    non-sided labels (e.g. CSF, brainstem, etc.), then all the structures of the same hemisphere (can be left or right),
+    and finally all the corresponding contralateral structures (in the same order).
+    :param target_res: resolution at which to resample the images and corresponding label maps.
+    Default is None, where no resampling is performed.
+    :param output_shape: (optional) desired shape of the outputs (image and label map), obtained by random cropping.
+    Can be an integer (same size in all dimensions), a sequence, a 1d numpy array, or the path to a 1d numpy array.
+    Default is None, where no cropping is performed.
+    :param output_div_by_n: (optional) forces the output shape to be divisible by this value. It overwrites output_shape
+    if necessary. Can be an integer (same size in all dimensions), a sequence, or a 1d numpy array.
+    :param n_neutral_labels: number of non-sided labels (including background).
+    Can be a number (isotropic resolution), a sequence, or a 1d numpy array.
+    :param flipping: (optional) whether to introduce right/left random flipping
+    :param flip_rl_only: (optional) if flipping is True, whether to flip only in the right/left axis. Default is False.
+    :param aff: (optional) example of an (n_dims+1)x(n_dims+1) affine matrix of one of the input label map.
+    Used to find brain's right/left axis. Should be given if flipping is True.
+    :param scaling_bounds: (optional) range of the random scaling to apply at each mini-batch. The scaling factor for
+    each dimension is sampled from a uniform distribution of predefined bounds. Can either be:
+    1) a number, in which case the scaling factor is independently sampled from the uniform distribution of bounds
+    [1-scaling_bounds, 1+scaling_bounds] for each dimension.
+    2) a sequence, in which case the scaling factor is sampled from the uniform distribution of bounds
+    (1-scaling_bounds[i], 1+scaling_bounds[i]) for the i-th dimension.
+    3) a numpy array of shape (2, n_dims), in which case the scaling factor is sampled from the uniform distribution
+     of bounds (scaling_bounds[0, i], scaling_bounds[1, i]) for the i-th dimension.
+    4) False, in which case scaling is completely turned off.
+    Default is scaling_bounds = 0.15 (case 1)
+    :param rotation_bounds: (optional) same as scaling bounds but for the rotation angle, except that for cases 1
+    and 2, the bounds are centred on 0 rather than 1, i.e. [0+rotation_bounds[i], 0-rotation_bounds[i]].
+    Default is rotation_bounds = 15.
+    :param enable_90_rotations: (optional) wheter to rotate the input by a random angle chosen in {0, 90, 180, 270}.
+    This is done regardless of the value of rotation_bounds. If true, a different value is sampled for each dimension.
+    :param shearing_bounds: (optional) same as scaling bounds. Default is shearing_bounds = 0.012.
+    :param translation_bounds: (optional) same as scaling bounds. Default is translation_bounds = False, but we
+    encourage using it when cropping is deactivated (i.e. when output_shape=None in BrainGenerator).
+    :param nonlin_std: (optional) Maximum value for the standard deviation of the normal distribution from which we
+    sample the first tensor for synthesising the deformation field. Set to 0 if you wish to completely turn the elastic
+    deformation off.
+    :param nonlin_shape_factor: (optional) if nonlin_std is strictly positive, factor between the shapes of the input
+    label maps and the shape of the input non-linear tensor.
+    :param bias_field_std: (optional) If strictly positive, this triggers the corruption of synthesised images with a
+    bias field. It is obtained by sampling a first small tensor from a normal distribution, resizing it to full size,
+    and rescaling it to positive values by taking the voxel-wise exponential. bias_field_std designates the std dev of
+    the normal distribution from which we sample the first tensor. Set to 0 to deactivate biad field corruption.
+    :param bias_shape_factor: (optional) If bias_field_std is strictly positive, this designates the ratio between the
+    size of the input label maps and the size of the first sampled tensor for synthesising the bias field.
+    :param same_bias_for_all_channels: (optional) If bias_field_std is not False, whether to apply the same bias field
+    to all channels or not.
+    :param augment_intensitites: (optional) whether to augment the intensities of the images with gamma augmentation.
+    :param noise_std: (optional) if augment_intensities is True, maximum value for the standard deviation of the normal
+    distribution from which we sample a Gaussian white noise. Set to False to deactivate white noise augmentation.
+    Default value is 1.
+    :param augment_channels_separately: (optional) whether to augment the intensities of each channel indenpendently.
+    Only applied if augment_intensity is True, and the training images have several channels. Default is True.
+    """
 
     # reformat resolutions
     im_shape = utils.reformat_to_list(im_shape)
     n_dims, _ = utils.get_dims(im_shape)
-    image_res = utils.reformat_to_list(image_res, length=n_dims)
-    target_res = image_res if target_res is None else utils.reformat_to_list(target_res, length=n_dims)
+    image_res = utils.reformat_to_list(image_res, n_dims)
+    target_res = image_res if (target_res is None) else utils.reformat_to_list(target_res, n_dims)
 
     # get shapes
-    cropping_shape, output_shape = get_shapes(im_shape, output_shape, image_res, target_res, output_div_by_n)
+    crop_shape, output_shape = get_shapes(im_shape, output_shape, image_res, target_res, output_div_by_n)
     im_shape = im_shape + [n_channels]
-
-    # create new_label_list and corresponding LUT to make sure that labels go from 0 to N-1
-    new_label_list, lut = utils.rearrange_label_list(label_list)
 
     # define model inputs
     image_input = KL.Input(shape=im_shape, name='image_input')
     labels_input = KL.Input(shape=im_shape[:-1] + [1], name='labels_input', dtype='int32')
 
-    # convert labels to new_label_list
-    labels = l2i_et.convert_labels(labels_input, lut)
-
     # flipping
     if flipping:
-        if flip_rl_only:
-            labels, image = layers.RandomFlip(int(edit_volumes.get_ras_axes(aff, n_dims)[0]),
-                                              [True, False], new_label_list, n_neutral_labels)([labels, image_input])
-        else:
-            labels, image = layers.RandomFlip(None, [True, False], new_label_list, n_neutral_labels)([labels, image_input])
+        rl_axis = edit_volumes.get_ras_axes(aff, n_dims)[0] if flip_rl_only else None
+        labels, image = layers.RandomFlip(rl_axis, [True, False],
+                                          label_list, n_neutral_labels)([labels_input, image_input])
     else:
+        labels = labels_input
         image = image_input
 
     # transform labels to soft prob. and concatenate them to the image
@@ -71,24 +129,22 @@ def build_augmentation_model(im_shape,
     image = KL.concatenate([image, labels], axis=len(im_shape))
 
     # spatial deformation
-    if (scaling_bounds is not False) | (rotation_bounds is not False) | (shearing_bounds is not False) | \
-       (translation_bounds is not False) | (nonlin_std > 0) | enable_90_rotations:
-        image._keras_shape = tuple(image.get_shape().as_list())
-        image = layers.RandomSpatialDeformation(scaling_bounds=scaling_bounds,
-                                                rotation_bounds=rotation_bounds,
-                                                shearing_bounds=shearing_bounds,
-                                                translation_bounds=translation_bounds,
-                                                enable_90_rotations=enable_90_rotations,
-                                                nonlin_std=nonlin_std,
-                                                nonlin_shape_factor=nonlin_shape_factor)(image)
+    image._keras_shape = tuple(image.get_shape().as_list())
+    image = layers.RandomSpatialDeformation(scaling_bounds=scaling_bounds,
+                                            rotation_bounds=rotation_bounds,
+                                            shearing_bounds=shearing_bounds,
+                                            translation_bounds=translation_bounds,
+                                            enable_90_rotations=enable_90_rotations,
+                                            nonlin_std=nonlin_std,
+                                            nonlin_shape_factor=nonlin_shape_factor)(image)
 
     # cropping
-    if cropping_shape != im_shape[:-1]:
+    if crop_shape != im_shape[:-1]:
         image._keras_shape = tuple(image.get_shape().as_list())
-        image = layers.RandomCrop(cropping_shape)(image)
+        image = layers.RandomCrop(crop_shape)(image)
 
-    # resampling (image blurred separately)
-    if cropping_shape != output_shape:
+    # resampling (the image is blurred separately before resampling)
+    if crop_shape != output_shape:
         sigma = l2i_et.blurring_sigma_for_downsampling(image_res, target_res)
         split = KL.Lambda(lambda x: tf.split(x, [n_channels, -1], axis=len(im_shape)))(image)
         image = split[0]
@@ -108,7 +164,7 @@ def build_augmentation_model(im_shape,
     # intensity augmentation
     if apply_intensity_augmentation:
         image._keras_shape = tuple(image.get_shape().as_list())
-        image = layers.IntensityAugmentation(noise_std, gamma_std=0.5,
+        image = layers.IntensityAugmentation(noise_std, gamma_std=.5,
                                              separate_channels=augment_channels_separately)(image)
 
     # build model
@@ -130,7 +186,7 @@ def get_shapes(image_shape, output_shape, atlas_res, target_res, output_div_by_n
     else:
         resample_factor = None
 
-    # output shape specified, need to get cropping shape if necessary
+    # output shape specified, need to get cropping shape, and resample shape if necessary
     if output_shape is not None:
         output_shape = utils.reformat_to_list(output_shape, length=n_dims, dtype='int')
 

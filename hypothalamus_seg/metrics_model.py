@@ -20,7 +20,7 @@ def metrics_model(input_model, metrics='dice'):
         last_tensor = layers.DiceLoss()([labels_gt, last_tensor])
 
     elif metrics == 'wl2':
-        last_tensor = layers.WeightedL2Loss(target_value=15)([labels_gt, last_tensor])
+        last_tensor = layers.WeightedL2Loss(target_value=5)([labels_gt, last_tensor])
 
     else:
         raise Exception('metrics should either be "dice or "wl2, got {}'.format(metrics))

@@ -2,17 +2,15 @@
 import os
 import csv
 import numpy as np
-import keras.layers as KL
 from keras.models import Model
 
 # project imports
-from hypothalamus_seg.evaluate import reproducibility_test
+from hypothalamus_seg import evaluate
 
 # third-party imports
 from ext.lab2im import utils
 from ext.lab2im import layers
 from ext.lab2im import edit_volumes
-from ext.neuron import layers as nrn_layers
 from ext.neuron import models as nrn_models
 
 
@@ -24,7 +22,6 @@ def predict(path_images,
             path_volumes=None,
             padding=None,
             cropping=None,
-            resample=None,
             sigma_smoothing=0,
             keep_biggest_component=False,
             conv_size=3,
@@ -35,7 +32,7 @@ def predict(path_images,
             activation='elu',
             gt_folder=None,
             evaluation_label_list=None,
-            compute_distances=True,
+            compute_distances=False,
             compute_score_whole_structure=True,
             recompute=True,
             verbose=True):
@@ -48,10 +45,10 @@ def predict(path_images,
     as the segmentation label list used for training the network.
     Can be a sequence, a 1d numpy array, or the path to a numpy 1d array.
     :param path_segmentations: (optional) path where segmentations will be writen.
-    Should be a dir, if path_images is a dir, and afile if path_images is a file.
+    Should be a dir, if path_images is a dir, and a file if path_images is a file.
     Should not be None, if path_posteriors is None.
     :param path_posteriors: (optional) path where posteriors will be writen.
-    Should be a dir, if path_images is a dir, and afile if path_images is a file.
+    Should be a dir, if path_images is a dir, and a file if path_images is a file.
     Should not be None, if path_segmentations is None.
     :param path_volumes: (optional) path of a csv file where the soft volumes of all segmented regions will be writen.
     The rows of the csv file correspond to subjects, and the columns correspond to segmentation labels.
@@ -60,8 +57,6 @@ def predict(path_images,
     Can be an int, a sequence or a 1d numpy array.
     :param cropping: (optional) crop the images to the specified shape before predicting the segmentation maps.
     If padding and cropping are specified, images are padded before being cropped.
-    Can be an int, a sequence or a 1d numpy array.
-    :param resample: (optional) resample the images to the specified resolution before predicting the segmentation maps.
     Can be an int, a sequence or a 1d numpy array.
     :param sigma_smoothing: (optional) If not None, the posteriors are smoothed with a gaussian kernel of the specified
     standard deviation.
@@ -72,9 +67,10 @@ def predict(path_images,
     :param unet_feat_count: (optional) number of features for the first layer of the unet. Default is 24.
     :param feat_multiplier: (optional) multiplicative factor for the number of feature for each new level. Default is 2.
     :param activation: (optional) activation function. Can be 'elu', 'relu'.
-    :param gt_folder: (optional) folder containing ground truth files for evaluation.
-    A numpy array containing all dice scores (labels in rows, subjects in columns) will be writen either at
-    segmentations_dir (if not None), or posteriors_dir.
+    :param gt_folder: (optional) path of the ground truth label maps corresponding to the input images. Should be a dir,
+    if path_images is a dir, or a file if path_images is a file.
+    Providing a gt_folder will trigger a Dice evaluation, where scores will be writen along with the path_segmentations.
+    Specifically, the scores are contained in a numpy array, where labels are in rows, and subjects in columns.
     :param evaluation_label_list: (optional) if gt_folder is True you can evaluate the Dice scores on a subset of the
     segmentation labels, by providing another label list here. Can be a sequence, a 1d numpy array, or the path to a
     numpy 1d array. Default is the same as segmentation_label_list.
@@ -111,10 +107,8 @@ def predict(path_images,
     net = None
     previous_model_input_shape = None
     loop_info = utils.LoopInfo(len(images_to_segment), 10, 'predicting', True)
-    for idx, (path_image, path_segmentation, path_posterior, tmp_compute) in enumerate(zip(images_to_segment,
-                                                                                           path_segmentations,
-                                                                                           path_posteriors,
-                                                                                           compute)):
+    for idx, (path_image, path_segmentation, path_posterior, tmp_compute) in \
+            enumerate(zip(images_to_segment, path_segmentations, path_posteriors, compute)):
         # compute segmentation only if needed
         if tmp_compute:
 
@@ -132,7 +126,7 @@ def predict(path_images,
                 previous_model_input_shape = model_input_shape
 
                 # build network
-                net = build_model(path_model, model_input_shape, resample, im_res, n_levels, len(label_list), conv_size,
+                net = build_model(path_model, model_input_shape, n_levels, len(label_list), conv_size,
                                   nb_conv_per_level, unet_feat_count, feat_multiplier, activation, sigma_smoothing)
 
             if verbose:
@@ -177,17 +171,23 @@ def predict(path_images,
         path_first_result = path_segmentations[0] if (path_segmentations[0] is not None) else path_posteriors[0]
         eval_folder = os.path.dirname(path_first_result)
 
+        # set path of result arrays for surface distance if necessary
+        if compute_distances:
+            path_hausdorff = os.path.join(eval_folder, 'hausdorff.npy')
+            path_mean_distance = os.path.join(eval_folder, 'mean_distance.npy')
+        else:
+            path_hausdorff = path_mean_distance = None
+
         # compute evaluation metrics
-        reproducibility_test(gt_folder,
-                             eval_folder,
-                             evaluation_label_list,
-                             compute_distances=compute_distances,
-                             compute_score_whole_structure=compute_score_whole_structure,
-                             path_dice=os.path.join(eval_folder, 'dice.npy'),
-                             path_hausdorff=os.path.join(eval_folder, 'hausdorff.npy'),
-                             path_mean_distance=os.path.join(eval_folder, 'mean_distance.npy'),
-                             recompute=recompute,
-                             verbose=verbose)
+        evaluate.evaluation(gt_folder,
+                            eval_folder,
+                            evaluation_label_list,
+                            compute_score_whole_structure=compute_score_whole_structure,
+                            path_dice=os.path.join(eval_folder, 'dice.npy'),
+                            path_hausdorff=path_hausdorff,
+                            path_mean_distance=path_mean_distance,
+                            recompute=recompute,
+                            verbose=verbose)
 
 
 def prepare_output_files(path_images, out_seg, out_posteriors, out_volumes, recompute):
@@ -250,7 +250,7 @@ def prepare_output_files(path_images, out_seg, out_posteriors, out_volumes, reco
                     ('.npz' not in out_posteriors):
                 utils.mkdir(out_posteriors)
                 filename = os.path.basename(path_images).replace('.nii', '_posteriors.nii')
-                filename = filename.replace('mgz', '_posteriors.mgz')
+                filename = filename.replace('.mgz', '_posteriors.mgz')
                 filename = filename.replace('.npz', '_posteriors.npz')
                 out_posteriors = [os.path.join(out_posteriors, filename)]
             else:
@@ -277,6 +277,7 @@ def preprocess_image(im_path, n_levels, crop_shape=None, padding=None):
     # read image and corresponding info
     im, shape, aff, n_dims, n_channels, header, im_res = utils.get_volume_info(im_path, True, np.eye(4))
 
+    # pad image if specified
     if padding:
         im = edit_volumes.pad_volume(im, padding_shape=padding)
         pad_shape = im.shape[:n_dims]
@@ -302,21 +303,11 @@ def preprocess_image(im_path, n_levels, crop_shape=None, padding=None):
 
     # normalise image
     if n_channels == 1:
-        m = np.min(im)
-        M = np.max(im)
-        if M == m:
-            im = np.zeros(im.shape)
-        else:
-            im = (im - m) / (M - m)
+        im = edit_volumes.rescale_volume(im, new_min=0., new_max=1., min_percentile=0.5, max_percentile=99.5)
     else:
         for i in range(im.shape[-1]):
-            channel = im[..., i]
-            m = np.min(channel)
-            M = np.max(channel)
-            if M == m:
-                im[..., i] = np.zeros(channel.shape)
-            else:
-                im[..., i] = (channel - m) / (M - m)
+            im[..., i] = edit_volumes.rescale_volume(im[..., i], new_min=0., new_max=1.,
+                                                     min_percentile=0.5, max_percentile=99.5)
 
     # add batch and channel axes
     im = utils.add_axis(im) if n_channels > 1 else utils.add_axis(im, axis=[0, -1])
@@ -324,25 +315,10 @@ def preprocess_image(im_path, n_levels, crop_shape=None, padding=None):
     return im, aff, header, im_res, n_channels, n_dims, shape, pad_shape, crop_idx
 
 
-def build_model(model_file, input_shape, resample, im_res, n_levels, n_lab, conv_size, nb_conv_per_level,
-                unet_feat_count, feat_multiplier, activation, sigma_smoothing):
+def build_model(model_file, input_shape, n_levels, n_lab, conv_size, nb_conv_per_level, unet_feat_count,
+                feat_multiplier, activation, sigma_smoothing):
 
     assert os.path.isfile(model_file), "The provided model path does not exist."
-
-    # initialisation
-    net = None
-    n_dims, n_channels = utils.get_dims(input_shape, max_channels=10)
-    resample = utils.reformat_to_list(resample, length=n_dims)
-
-    # build preprocessing model
-    if resample is not None:
-        im_input = KL.Input(shape=input_shape, name='pre_resample_input')
-        resample_factor = [im_res[i] / float(resample[i]) for i in range(n_dims)]
-        resample_shape = [utils.find_closest_number_divisible_by_m(resample_factor[i] * input_shape[i],
-                          2 ** n_levels, smaller_ans=False) for i in range(n_dims)]
-        resampled = nrn_layers.Resize(size=resample_shape, name='pre_resample')(im_input)
-        net = Model(inputs=im_input, outputs=resampled)
-        input_shape = resample_shape + [n_channels]
 
     # build UNet
     net = nrn_models.unet(nb_features=unet_feat_count,
@@ -350,51 +326,26 @@ def build_model(model_file, input_shape, resample, im_res, n_levels, n_lab, conv
                           nb_levels=n_levels,
                           conv_size=conv_size,
                           nb_labels=n_lab,
-                          name='unet',
-                          prefix=None,
                           feat_mult=feat_multiplier,
-                          pool_size=2,
-                          use_logp=True,
-                          padding='same',
-                          dilation_rate_mult=1,
                           activation=activation,
-                          use_residuals=False,
-                          final_pred_activation='softmax',
                           nb_conv_per_level=nb_conv_per_level,
-                          add_prior_layer=False,
-                          add_prior_layer_reg=0,
-                          layer_nb_feats=None,
-                          conv_dropout=0,
-                          batch_norm=-1,
-                          input_model=net)
+                          batch_norm=-1)
     net.load_weights(model_file, by_name=True)
 
-    # build postprocessing model
-    if (resample is not None) | (sigma_smoothing != 0):
-
-        # get UNet output
-        input_tensor = net.inputs
+    # smooth posteriors if specified
+    if sigma_smoothing > 0:
         last_tensor = net.output
-
-        # resample to initial resolution
-        if resample is not None:
-            last_tensor = nrn_layers.Resize(size=input_shape[:-1], name='post_resample')(last_tensor)
-
-        # smooth posteriors
-        if sigma_smoothing != 0:
-            last_tensor._keras_shape = tuple(last_tensor.get_shape().as_list())
-            last_tensor = layers.GaussianBlur(sigma=sigma_smoothing)(last_tensor)
-
-        # build model
-        net = Model(inputs=input_tensor, outputs=last_tensor)
+        last_tensor._keras_shape = tuple(last_tensor.get_shape().as_list())
+        last_tensor = layers.GaussianBlur(sigma=sigma_smoothing)(last_tensor)
+        net = Model(inputs=net.inputs, outputs=last_tensor)
 
     return net
 
 
-def postprocess(prediction, pad_shape, im_shape, crop, n_dims, labels, keep_biggest_component, aff):
+def postprocess(post_patch, pad_shape, im_shape, crop, n_dims, labels, keep_biggest_component, aff):
 
     # get posteriors and segmentation
-    post_patch = np.squeeze(prediction)
+    post_patch = np.squeeze(post_patch)
     seg_patch = post_patch.argmax(-1)
 
     # keep biggest connected component (use it with smoothing!)
@@ -423,10 +374,11 @@ def postprocess(prediction, pad_shape, im_shape, crop, n_dims, labels, keep_bigg
         bounds = [int((p-i)/2) for (p, i) in zip(pad_shape, im_shape)]
         bounds += [p + i for (p, i) in zip(bounds, im_shape)]
         seg = edit_volumes.crop_volume_with_idx(seg, bounds)
+        posteriors = edit_volumes.crop_volume_with_idx(posteriors, bounds, n_dims=n_dims)
 
     # align prediction back to first orientation
     if n_dims > 2:
-        seg = edit_volumes.align_volume_to_ref(seg, np.eye(4), aff_ref=aff)
+        seg = edit_volumes.align_volume_to_ref(seg, np.eye(4), aff_ref=aff, return_aff=False)
         posteriors = edit_volumes.align_volume_to_ref(posteriors, np.eye(4), aff_ref=aff, n_dims=n_dims)
 
     return seg, posteriors

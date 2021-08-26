@@ -7,9 +7,17 @@ from ext.lab2im import utils
 
 
 def image_seg_generator(path_images,
-                        path_labels,
+                        path_label_maps,
                         batchsize=1,
                         n_channels=1):
+    """
+    This function builds a generator that will be used to give the necessary inputs to the augmentation model (i.e. the
+    input image and label map).
+    :param path_images: list of the paths of the input images.
+    :param path_label_maps: list of the paths of the input label maps (in the same order as path_images).
+    :param batchsize: (optional) numbers of examples per mini-batch. Default is 1.
+    :param n_channels: (optional) number of channels of the input images. Default is 1.
+    """
 
     # get image info
     _, _, n_dims, _, _, _ = utils.get_volume_info(path_images[0])
@@ -34,7 +42,7 @@ def image_seg_generator(path_images,
                 list_images.append(utils.add_axis(image, axis=[0, -1]))
 
             # add labels
-            label_map = utils.load_volume(path_labels[idx], dtype='int', aff_ref=np.eye(4))
+            label_map = utils.load_volume(path_label_maps[idx], dtype='int', aff_ref=np.eye(4))
             list_label_maps.append(utils.add_axis(label_map, axis=[0, -1]))
 
         # build list of inputs of augmentation model
