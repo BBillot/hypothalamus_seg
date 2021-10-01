@@ -263,10 +263,10 @@ def prepare_output_files(path_images, out_seg, out_posteriors, out_volumes, reco
     return images_to_segment, out_seg, out_posteriors, out_volumes, recompute_list
 
 
-def preprocess_image(im_path, n_levels, crop_shape=None, padding=None):
+def preprocess_image(im_path, n_levels, crop=None, padding=None):
 
     # read image and corresponding info
-    im, shape, aff, n_dims, n_channels, header, im_res = utils.get_volume_info(im_path, True, np.eye(4))
+    im, shape, aff, n_dims, n_channels, header, im_res = utils.get_volume_info(im_path, True, aff_ref=np.eye(4))
 
     # pad image if specified
     if padding:
@@ -276,19 +276,19 @@ def preprocess_image(im_path, n_levels, crop_shape=None, padding=None):
         pad_shape = shape
 
     # check that patch_shape or im_shape are divisible by 2**n_levels
-    if crop_shape is not None:
-        crop_shape = utils.reformat_to_list(crop_shape, length=n_dims, dtype='int')
-        if not all([pad_shape[i] >= crop_shape[i] for i in range(len(pad_shape))]):
-            crop_shape = [min(pad_shape[i], crop_shape[i]) for i in range(n_dims)]
-        if not all([size % (2**n_levels) == 0 for size in crop_shape]):
-            crop_shape = [utils.find_closest_number_divisible_by_m(size, 2 ** n_levels) for size in crop_shape]
+    if crop is not None:
+        crop = utils.reformat_to_list(crop, length=n_dims, dtype='int')
+        if not all([pad_shape[i] >= crop[i] for i in range(len(pad_shape))]):
+            crop = [min(pad_shape[i], crop[i]) for i in range(n_dims)]
+        if not all([size % (2**n_levels) == 0 for size in crop]):
+            crop = [utils.find_closest_number_divisible_by_m(size, 2 ** n_levels) for size in crop]
     else:
         if not all([size % (2**n_levels) == 0 for size in pad_shape]):
-            crop_shape = [utils.find_closest_number_divisible_by_m(size, 2 ** n_levels) for size in pad_shape]
+            crop = [utils.find_closest_number_divisible_by_m(size, 2 ** n_levels) for size in pad_shape]
 
     # crop image if necessary
-    if crop_shape is not None:
-        im, crop_idx = edit_volumes.crop_volume(im, cropping_shape=crop_shape, return_crop_idx=True)
+    if crop is not None:
+        im, crop_idx = edit_volumes.crop_volume(im, cropping_shape=crop, return_crop_idx=True)
     else:
         crop_idx = None
 
@@ -369,7 +369,7 @@ def postprocess(post_patch, pad_shape, im_shape, crop, n_dims, labels, keep_bigg
 
     # align prediction back to first orientation
     if n_dims > 2:
-        seg = edit_volumes.align_volume_to_ref(seg, np.eye(4), aff_ref=aff, return_aff=False)
-        posteriors = edit_volumes.align_volume_to_ref(posteriors, np.eye(4), aff_ref=aff, n_dims=n_dims)
+        seg = edit_volumes.align_volume_to_ref(seg, aff=np.eye(4), aff_ref=aff, n_dims=n_dims, return_aff=False)
+        posteriors = edit_volumes.align_volume_to_ref(posteriors, aff=np.eye(4), aff_ref=aff, n_dims=n_dims)
 
     return seg, posteriors
