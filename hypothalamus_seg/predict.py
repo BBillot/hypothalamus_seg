@@ -103,39 +103,30 @@ def predict(path_images,
             writer.writerows(csv_header)
         csvFile.close()
 
+    # build network
+    _, _, n_dims, n_channels, _, _ = utils.get_volume_info(images_to_segment[0])
+    model_input_shape = [None] * n_dims + [n_channels]
+    net = build_model(path_model, model_input_shape, n_levels, len(label_list), conv_size,
+                      nb_conv_per_level, unet_feat_count, feat_multiplier, activation, sigma_smoothing)
+
     # perform segmentation
-    net = None
-    previous_model_input_shape = None
     loop_info = utils.LoopInfo(len(images_to_segment), 10, 'predicting', True)
     for idx, (path_image, path_segmentation, path_posterior, tmp_compute) in \
             enumerate(zip(images_to_segment, path_segmentations, path_posteriors, compute)):
+
         # compute segmentation only if needed
         if tmp_compute:
-
-            # preprocess image and get information
-            image, aff, h, im_res, n_channels, n_dims, shape, pad_shape, crop_idx = \
-                preprocess_image(path_image, n_levels, cropping, padding)
-            model_input_shape = list(image.shape[1:])
-
-            # prepare net for first image or if input's size has changed
-            if (net is None) | (previous_model_input_shape != model_input_shape):
-
-                # check for image size compatibility
-                if (net is not None) & (previous_model_input_shape != model_input_shape) & verbose:
-                    print('image of different shape as previous ones, redefining network')
-                previous_model_input_shape = model_input_shape
-
-                # build network
-                net = build_model(path_model, model_input_shape, n_levels, len(label_list), conv_size,
-                                  nb_conv_per_level, unet_feat_count, feat_multiplier, activation, sigma_smoothing)
-
             if verbose:
                 loop_info.update(idx)
 
-            # predict posteriors
+            # preprocessing
+            image, aff, h, im_res, _, _, shape, pad_shape, crop_idx = \
+                preprocess_image(path_image, n_levels, cropping, padding)
+
+            # prediction
             prediction_patch = net.predict(image)
 
-            # get posteriors and segmentation
+            # postprocessing
             seg, posteriors = postprocess(prediction_patch, pad_shape, shape, crop_idx, n_dims, label_list,
                                           keep_biggest_component, aff)
 
@@ -204,7 +195,7 @@ def prepare_output_files(path_images, out_seg, out_posteriors, out_volumes, reco
     # prepare input/output volumes
     if ('.nii.gz' not in basename) & ('.nii' not in basename) & ('.mgz' not in basename) & ('.npz' not in basename):
         if os.path.isfile(path_images):
-            raise Exception('extension not supported for %s, only use: nii.gz, .nii, .mgz, or .npz' % path_images)
+            raise Exception('Extension not supported for %s, only use: nii.gz, .nii, .mgz, or .npz' % path_images)
         images_to_segment = utils.list_images_in_folder(path_images)
         if out_seg is not None:
             utils.mkdir(out_seg)
@@ -228,14 +219,14 @@ def prepare_output_files(path_images, out_seg, out_posteriors, out_volumes, reco
             recompute_post = [out_volumes is not None] * len(images_to_segment)
 
     else:
-        assert os.path.isfile(path_images), "files does not exist: %s " \
+        assert os.path.isfile(path_images), "file does not exist: %s " \
                                             "\nplease make sure the path and the extension are correct" % path_images
         images_to_segment = [path_images]
         if out_seg is not None:
             if ('.nii.gz' not in out_seg) & ('.nii' not in out_seg) & ('.mgz' not in out_seg) & ('.npz' not in out_seg):
                 utils.mkdir(out_seg)
                 filename = os.path.basename(path_images).replace('.nii', '_seg.nii')
-                filename = filename.replace('mgz', '_seg.mgz')
+                filename = filename.replace('.mgz', '_seg.mgz')
                 filename = filename.replace('.npz', '_seg.npz')
                 out_seg = [os.path.join(out_seg, filename)]
             else:
