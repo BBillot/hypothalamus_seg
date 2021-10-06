@@ -149,29 +149,35 @@ cd <path to hypothalamus_seg>
 Depending on your operatin system, you can then simply segment images by calling:
 ```
 # In Linux or in Mac:
-./hypo_seg <image> <segmentation> --out_posteriors <posteriors> --out_volumes <volume>
+./hypo_seg <image> <segmentation> --post <post> --vol <vol>
 
 # In Windows:
-./hypo_seg.exe <image> <segmentation> --out_posteriors <posteriors> --out_volumes <volume> 
+./hypo_seg.exe <image> <segmentation> --post <post> --vol <vol> 
 ```
 where (in all cases):
 - `<image>` is the path to an image to segment. \
 This can also be a folder, in which case all the images inside that folder will be segmented.
-- `<segmentation>` is the path where the output segmentation will be saved. \
-This must be a folder if `<path image>` designates a folder.
-- `<posteriors>` (optional) is the path where the posteriors (given as soft probability maps) will be saved. \
-This must be a folder if `<path image>` designates a folder.
-- `<volume>` (optional) is the path to an output csv file where the volumes of all subunits
+- `<segmentation>` is the path where the output segmentation(s) will be saved. \
+This must be a folder if `<image>` designates a folder.
+- `<post>` (optional) is the path where the posteriors (given as soft probability maps) will be saved. \
+This must be a folder if `<image>` designates a folder.
+- `<resample>` (optional) hypothalamus_seg was trained on images at approximately 1mm isotropic resolution, 
+it would be underperforming when presented with images of higher/lower resolutions. Therefore, any image with a 
+resolution outside the [0.95, 1.15] range will be internally resampled to 1mm resolution. Use this optional `--post`
+flag to save the resampled images. It must be the path to a single image, or a folder if `<image>` designates a folder.
+Also, note that if the image is resampled, the segmentation will be given at 1mm resolution as well, regardless of 
+whether or not the `--post` flag is used.
+- `<vol>` (optional) is the path to an output csv file where the volumes of all subunits
 will be saved for all segmented scans (one csv file for all subjects; e.g. /path/to/volumes.csv)
 
 \
 Additional optional flags are also available:
-- `--threads`: to indicate the number of cores to be used if running on a CPU (example: `--threads 3` to run on 3 cores).
- This value defaults to 1, but we recommand increasing it for faster analysis.
-- `--cpu`: to enforce the code to run on the CPU, even if a GPU is available.
 - `--crop`: to run the code on a smaller patch of the provided shape (example: `--crop 160` to run on 160<sup>3</sup> 
 patches). The patches are extracted around the centre of the inputs. This value defaults to 184, but it can be decreased
 for faster analysis or to fit in your GPU.
+- `--threads`: to indicate the number of cores to be used if running on a CPU (example: `--threads 3` to run on 3 cores).
+ This value defaults to 1, but we recommand increasing it for faster analysis.
+- `--cpu`: to enforce the code to run on the CPU, even if a GPU is available.
 
 \
 You can have access to these explanations directly by typing once in `<path to hypothalamus_seg>`:
