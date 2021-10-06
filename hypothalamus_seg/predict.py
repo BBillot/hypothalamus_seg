@@ -83,7 +83,7 @@ def predict(path_images,
     :param verbose: (optional) whether to print out info about the remaining number of cases.
     """
 
-    # prepare output filepaths
+    # prepare input/output filepaths
     images_to_segment, path_segmentations, path_posteriors, path_volumes, compute = \
         prepare_output_files(path_images, path_segmentations, path_posteriors, path_volumes, recompute)
 
