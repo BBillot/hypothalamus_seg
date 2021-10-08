@@ -82,9 +82,9 @@ Moreover, this repository relies on several external python packages (already in
 ##### 1- installing hypothalamus_seg
 In order to download the segmentation tool (but not the code), click on one of the following links (depending on your 
 operating system):
-- Linux: [hypo_seg_linux.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EYC4OStPsd9KlBVx8h2G2VcBEBiwA62LkSxfot9SjdvtYA?e=4RFsHq)
-- Mac: [hypo_seg_mac.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/Ea0PwUCQP7FMn0CtVlhDEW0Bx_I2e16ysnKAvpig8LV8gA?e=bpVhif)
-- Windows: [hypo_seg_windows.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EZBjLVIY3RdNkCY3JX1rq-0BvoWqPjAfFrUb_pp_UqKlTw?e=2xgZUz)
+- Linux: [hypo_seg_linux.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EXofMBCj_5ROmCFjX4Tj1QIBFRTzGSPsvbcshbTgrVORZQ?e=jY6gcg)
+- Mac: [hypo_seg_mac.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EY608KRqCtlFj8mAgHGhp4wBsV0MgLolsgbZ2MUplPQ8Ww?e=kg6reO)
+- Windows: [hypo_seg_windows.zip](https://liveuclac-my.sharepoint.com/:u:/g/personal/rmappmb_ucl_ac_uk/EYx8DX_LNzRFgGlAs2RhatoBHNntJpqFncq10osxSG6Y_A?e=npaGEb)
 
 This will take you to a OneDrive page where you can download a zip file by directly clicking on `Download` (top left). \
 Once the file is downloaded, move it to the desired location on your computer, and unzip it. 
@@ -133,7 +133,7 @@ See the Dependencies section for further details on the requirements.
 
 ### How to use this code
 
-**Important**: The path to the `hypothalamus_seg` folder (e.g. `\home\user1\hypothalamus_seg`) will now be referred to 
+**IMPORTANT**: The path to the `hypothalamus_seg` folder (e.g. `/home/user1/hypothalamus_seg`) will now be referred to 
 as `<path to hypothalamus_seg>`. Thus, do not forget to replace it in the following instructions.
 
 To use this code, you will first need to open a terminal window:
@@ -149,10 +149,10 @@ cd <path to hypothalamus_seg>
 Depending on your operatin system, you can then simply segment images by calling:
 ```
 # In Linux or in Mac:
-./hypo_seg <image> <segmentation> --post <post> --vol <vol>
+./hypo_seg --i <image> --o <segmentation> --post <post> --resample <resample> --vol <vol>
 
 # In Windows:
-./hypo_seg.exe <image> <segmentation> --post <post> --vol <vol> 
+./hypo_seg.exe --i <image> --o <segmentation> --post <post> --resample <resample> --vol <vol> 
 ```
 where (in all cases):
 - `<image>` is the path to an image to segment. \
@@ -162,7 +162,7 @@ This must be a folder if `<image>` designates a folder.
 - `<post>` (optional) is the path where the posteriors (given as soft probability maps) will be saved. \
 This must be a folder if `<image>` designates a folder.
 - `<resample>` (optional) hypothalamus_seg was trained on images at approximately 1mm isotropic resolution, 
-it would be underperforming when presented with images of higher/lower resolutions. Therefore, any image with a 
+so it would be underperforming if presented with images of higher/lower resolutions. Therefore, any image with a 
 resolution outside the [0.95, 1.15] range will be internally resampled to 1mm resolution. Use this optional `--post`
 flag to save the resampled images. It must be the path to a single image, or a folder if `<image>` designates a folder.
 Also, note that if the image is resampled, the segmentation will be given at 1mm resolution as well, regardless of 
@@ -186,12 +186,13 @@ You can have access to these explanations directly by typing once in `<path to h
 ./hypo_seg.exe -h    # In Windows
 ```
 
-**Important 1**: As specified above, this tool can segment T1-weighted scans at approximately 1mm isotropic resolution
-(i.e. between 0.85mm and 1.15mm). If the resolution of your images is not in this range (e.g. HCP data at 0.7mm 
-resolution), please resample them (e.g. with FreeSurfer's command `mri_convert`) to 1mm isotropic resolution before 
-using this tool.
+**IMPORTANT 1**: Because hypothalamus_seg may resample the images at 1mm isotropic resolution, some viewers will not 
+display them correctly when overlaying the segmentations on the original images. If that’s the case, you can use 
+the `--resample` flag to obtain a resampled image that lives in the same space as the segmentation, such that any viewer
+can be used to visualize them together. We highlight that the resampling is performed internally to avoid the dependence
+ on any external tool.
 
-**Important 2**: If you wish to run this tool on several images, we recommend that you put them in a single folder and
+**IMPORTANT 2**: If you wish to run this tool on several images, we recommend that you put them in a single folder and
 run hypothalamus_seg on this folder, rather than calling it individually on each image. That way you can save time by
 avoiding to setup all the required libraries for each image, which typically takes 60% of the runtime for the CPU 
 version, and more than 90% for the GPU version.
