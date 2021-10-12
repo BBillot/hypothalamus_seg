@@ -311,7 +311,6 @@ def preprocess_image(im_path, n_levels, target_res, crop=None, padding=None, pat
         if np.any((im_res > target_res + 0.05) | (im_res < target_res - 0.05)):
             im_res = target_res
             im, aff = edit_volumes.resample_volume(im, aff, im_res)
-            shape = list(im.shape)
             if path_resample is not None:
                 utils.save_volume(im, aff, header, path_resample)
 
@@ -321,9 +320,7 @@ def preprocess_image(im_path, n_levels, target_res, crop=None, padding=None, pat
     # pad image if specified
     if padding:
         im = edit_volumes.pad_volume(im, padding_shape=padding)
-        pad_shape = im.shape[:n_dims]
-    else:
-        pad_shape = shape
+    pad_shape = im.shape[:n_dims]
 
     # check that patch_shape or im_shape are divisible by 2**n_levels
     if crop is not None:
