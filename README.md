@@ -5,7 +5,7 @@ This page hosts the code related to the following publication: \
 **[Automated segmentation of the Hypothalamus and associated subunits in 
 brain MRI](https://www.sciencedirect.com/science/article/pii/S1053811920307734)** \
 B. Billot, M. Bocchetta, E. Todd, A. V. Dalca, J. D. Rohrer, J. E. Iglesias\
-NeuroImage (in press)
+NeuroImage (2020)
 
 \
 **IMPORTANT**: any volume analysis made with this code downloaded before the **17/11/2020** will have to be rerun, as we 
@@ -201,7 +201,15 @@ version, and more than 90% for the GPU version.
 
 ----------------
 
-### Contacts
+### Citation/Contact
+
+This code is under [Apache 2.0](LICENSE.txt) licensing. \
+If you use it, please cite the following paper:
+
+**Automated segmentation of the Hypothalamus and associated subunits in brain MRI** \
+B. Billot, M. Bocchetta, E. Todd, A. V. Dalca, J. D. Rohrer, J. E. Iglesias \
+NeuroImage (2020) \
+[[link](https://www.sciencedirect.com/science/article/pii/S1053811920307734) | [bibtex](bibtex.bib)]
 
 If you have any question regarding the usage of this code, or any suggestions to improve it, you can contact us at: \
 benjamin.billot.18@ucl.ac.uk
