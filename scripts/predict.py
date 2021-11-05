@@ -9,7 +9,7 @@ parser.add_argument("path_images", type=str,
 parser.add_argument("path_segmentations", type=str,
                     help="saving path. Can be a single image (if path_images is an image), or a folder.")
 parser.add_argument("path_model", type=str, help="path to a h5 file containing the trained model.")
-parser.add_argument("segmentation_label_list", type=str,
+parser.add_argument("segmentation_labels", type=str,
                     help="path to a numpy array containing all the segmentation label values")
 
 # saving paths
@@ -44,7 +44,7 @@ parser.add_argument("--activation", type=str, dest="activation", default='elu', 
 # Evaluation parameters
 parser.add_argument("--gt_folder", type=str, default=None, dest="gt_folder",
                     help="folder with ground truth segmentations for evaluation.")
-parser.add_argument("--eval_label_list", type=str, dest="evaluation_label_list", default=None,
+parser.add_argument("--eval_label_list", type=str, dest="evaluation_labels", default=None,
                     help="labels to evaluate Dice scores on if gt is provided. Default is the same as label_list.")
 parser.add_argument("--distances", action='store_true', dest="compute_distances",
                     help="whether to compute surface distances with gt segmentations. Default is False.")

@@ -17,7 +17,7 @@ from ext.neuron import models as nrn_models
 def predict(path_images,
             path_segmentations,
             path_model,
-            segmentation_label_list,
+            segmentation_labels,
             path_posteriors=None,
             path_resampled=None,
             path_volumes=None,
@@ -33,7 +33,7 @@ def predict(path_images,
             feat_multiplier=2,
             activation='elu',
             gt_folder=None,
-            evaluation_label_list=None,
+            evaluation_labels=None,
             compute_distances=False,
             compute_score_whole_structure=True,
             recompute=True,
@@ -45,7 +45,7 @@ def predict(path_images,
     :param path_segmentations: path where segmentations will be writen.
     Should be a dir, if path_images is a dir, and a file if path_images is a file.
     :param path_model: path ot the trained model.
-    :param segmentation_label_list: List of labels for which to compute Dice scores. It should contain the same values
+    :param segmentation_labels: List of labels for which to compute Dice scores. It should contain the same values
     as the segmentation label list used for training the network.
     Can be a sequence, a 1d numpy array, or the path to a numpy 1d array.
     :param path_posteriors: (optional) path where posteriors will be writen.
@@ -79,7 +79,7 @@ def predict(path_images,
     if path_images is a dir, or a file if path_images is a file.
     Providing a gt_folder will trigger a Dice evaluation, where scores will be writen along with the path_segmentations.
     Specifically, the scores are contained in a numpy array, where labels are in rows, and subjects in columns.
-    :param evaluation_label_list: (optional) if gt_folder is True you can evaluate the Dice scores on a subset of the
+    :param evaluation_labels: (optional) if gt_folder is True you can evaluate the Dice scores on a subset of the
     segmentation labels, by providing another label list here. Can be a sequence, a 1d numpy array, or the path to a
     numpy 1d array. Default is the same as segmentation_label_list.
     :param compute_distances: (optional) whether to add Hausdorff and mean surface distance evaluations to the default
@@ -96,13 +96,11 @@ def predict(path_images,
         prepare_output_files(path_images, path_segmentations, path_posteriors, path_resampled, path_volumes, recompute)
 
     # get label and classes lists
-    label_list, _ = utils.get_list_labels(label_list=segmentation_label_list)
-    if evaluation_label_list is None:
-        evaluation_label_list = label_list
+    segmentation_labels, _ = utils.get_list_labels(label_list=segmentation_labels)
 
     # prepare volume file if needed
     if path_volumes is not None:
-        csv_header = [['subject'] + [str(lab) for lab in label_list[1:]] + ['whole_left'] + ['whole_right']]
+        csv_header = [['subject'] + [str(lab) for lab in segmentation_labels[1:]] + ['whole_left'] + ['whole_right']]
         with open(path_volumes, 'w') as csvFile:
             writer = csv.writer(csvFile)
             writer.writerows(csv_header)
@@ -111,7 +109,7 @@ def predict(path_images,
     # build network
     _, _, n_dims, n_channels, _, _ = utils.get_volume_info(path_images[0])
     model_input_shape = [None] * n_dims + [n_channels]
-    net = build_model(path_model, model_input_shape, n_levels, len(label_list), conv_size,
+    net = build_model(path_model, model_input_shape, n_levels, len(segmentation_labels), conv_size,
                       nb_conv_per_level, unet_feat_count, feat_multiplier, activation, sigma_smoothing)
 
     # perform segmentation
@@ -132,7 +130,7 @@ def predict(path_images,
             prediction_patch = net.predict(image)
 
             # postprocessing
-            seg, posteriors = postprocess(prediction_patch, pad_shape, shape, crop_idx, n_dims, label_list,
+            seg, posteriors = postprocess(prediction_patch, pad_shape, shape, crop_idx, n_dims, segmentation_labels,
                                           keep_biggest_component, aff)
 
             # write results to disk
@@ -165,6 +163,8 @@ def predict(path_images,
 
         # find path evaluation folder
         eval_folder = os.path.dirname(path_segmentations[0])
+        if evaluation_labels is None:
+            evaluation_labels = segmentation_labels
 
         # set path of result arrays for surface distance if necessary
         if compute_distances:
@@ -176,7 +176,7 @@ def predict(path_images,
         # compute evaluation metrics
         evaluate.evaluation(gt_folder,
                             eval_folder,
-                            evaluation_label_list,
+                            evaluation_labels,
                             compute_score_whole_structure=compute_score_whole_structure,
                             path_dice=os.path.join(eval_folder, 'dice.npy'),
                             path_hausdorff=path_hausdorff,
@@ -383,7 +383,7 @@ def build_model(model_file, input_shape, n_levels, n_lab, conv_size, nb_conv_per
     return net
 
 
-def postprocess(post_patch, pad_shape, im_shape, crop, n_dims, labels, keep_biggest_component, aff):
+def postprocess(post_patch, pad_shape, im_shape, crop, n_dims, segmentation_labels, keep_biggest_component, aff):
 
     # get posteriors and segmentation
     post_patch = np.squeeze(post_patch)
@@ -398,7 +398,7 @@ def postprocess(post_patch, pad_shape, im_shape, crop, n_dims, labels, keep_bigg
     # paste patches back to matrix of original image size
     if crop is not None:
         seg = np.zeros(shape=pad_shape, dtype='int32')
-        posteriors = np.zeros(shape=[*pad_shape, labels.shape[0]])
+        posteriors = np.zeros(shape=[*pad_shape, segmentation_labels.shape[0]])
         posteriors[..., 0] = np.ones(pad_shape)  # place background around patch
         if n_dims == 2:
             seg[crop[0]:crop[2], crop[1]:crop[3]] = seg_patch
@@ -409,7 +409,7 @@ def postprocess(post_patch, pad_shape, im_shape, crop, n_dims, labels, keep_bigg
     else:
         seg = seg_patch
         posteriors = post_patch
-    seg = labels[seg.astype('int')].astype('int')
+    seg = segmentation_labels[seg.astype('int')].astype('int')
 
     if im_shape != pad_shape:
         bounds = [int((p-i)/2) for (p, i) in zip(pad_shape, im_shape)]

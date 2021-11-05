@@ -17,11 +17,12 @@ def validate_training(image_dir,
                       gt_dir,
                       models_dir,
                       validation_main_dir,
-                      segmentation_label_list,
-                      evaluation_label_list=None,
+                      segmentation_labels,
+                      evaluation_labels=None,
                       step_eval=1,
                       padding=None,
                       cropping=None,
+                      target_res=1.,
                       sigma_smoothing=0,
                       keep_biggest_component=False,
                       conv_size=3,
@@ -41,17 +42,21 @@ def validate_training(image_dir,
     These are matched to the validation images by sorting order.
     :param models_dir: path of the folder with the models to validate.
     :param validation_main_dir: path of the folder where all the models validation subfolders will be saved.
-    :param segmentation_label_list: path of the numpy array containing all the segmentation labels used during training.
-    :param evaluation_label_list: (optional) label values to validate on. Must be a subset of the segmentation labels.
+    :param segmentation_labels: path of the numpy array containing all the segmentation labels used during training.
+    :param evaluation_labels: (optional) label values to validate on. Must be a subset of the segmentation labels.
     Can be a sequence, a 1d numpy array, or the path to a numpy 1d array. Default is the same as segmentation_label_list
     :param step_eval: (optional) If step_eval > 1 skips models when validating, by validating on models step_eval apart.
-    :param sigma_smoothing: (optional) If not None, the posteriors are smoothed with a gaussian kernel of the specified
-    standard deviation.
-    :param keep_biggest_component: (optional) whether to only keep the biggest component in the predicted segmentation.
     :param padding: (optional) pad the images to the specified shape before predicting the segmentation maps.
     Can be an int, a sequence or a 1d numpy array.
     :param cropping: (optional) whether to crop the input to smaller size while being run through the network.
     The result is then given in the original image space. Can be an int, a sequence, or a 1d numpy array.
+    :param target_res: (optional) target resolution at which the network operates (and thus resolution of the output
+    segmentations). This must match the resolution of the training data ! target_res is used to automatically resampled
+    the images with resolutions outside [target_res-0.05, target_res+0.05].
+    Can be a sequence, a 1d numpy array. Set to None to disable the automatic resampling. Default is 1mm.
+    :param sigma_smoothing: (optional) If not None, the posteriors are smoothed with a gaussian kernel of the specified
+    standard deviation.
+    :param keep_biggest_component: (optional) whether to only keep the biggest component in the predicted segmentation.
     :param n_levels: (optional) number of level for the Unet. Default is 5.
     :param nb_conv_per_level: (optional) number of convolutional layers per level. Default is 2.
     :param conv_size: (optional) size of the convolution kernels. Default is 2.
@@ -80,11 +85,12 @@ def validate_training(image_dir,
         if (not os.path.isfile(dice_path)) | recompute:
             loop_info.update(model_idx)
             predict(path_images=image_dir,
-                    path_model=path_model,
-                    segmentation_label_list=segmentation_label_list,
                     path_segmentations=model_val_dir,
+                    path_model=path_model,
+                    segmentation_labels=segmentation_labels,
                     padding=padding,
                     cropping=cropping,
+                    target_res=target_res,
                     sigma_smoothing=sigma_smoothing,
                     keep_biggest_component=keep_biggest_component,
                     conv_size=conv_size,
@@ -94,7 +100,7 @@ def validate_training(image_dir,
                     feat_multiplier=feat_multiplier,
                     activation=activation,
                     gt_folder=gt_dir,
-                    evaluation_label_list=evaluation_label_list,
+                    evaluation_labels=evaluation_labels,
                     compute_distances=compute_distances,
                     compute_score_whole_structure=compute_score_whole_structure,
                     recompute=recompute,
