@@ -6,7 +6,7 @@ Copyright 2020 Benjamin Billot
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in
 compliance with the License. You may obtain a copy of the License at
-http://www.apache.org/licenses/LICENSE-2.0
+https://www.apache.org/licenses/LICENSE-2.0
 Unless required by applicable law or agreed to in writing, software distributed under the License is
 distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 implied. See the License for the specific language governing permissions and limitations under the
@@ -51,7 +51,7 @@ def validate_training(image_dir,
                       compute_score_whole_structure=True,
                       recompute=True):
     """This function validates models saved at different epochs of the same training.
-    All models are assumed to be in the same folder.contained in models_dir.
+    All models are assumed to be in the same folder contained in models_dir.
     The results of each model are saved in a subfolder in validation_main_dir.
     :param image_dir: path of the folder with validation images.
     :param gt_dir: path of the folder with ground truth label maps.
@@ -77,13 +77,13 @@ def validate_training(image_dir,
     :param nb_conv_per_level: (optional) number of convolutional layers per level. Default is 2.
     :param conv_size: (optional) size of the convolution kernels. Default is 2.
     :param unet_feat_count: (optional) number of feature maps for the first level. Default is 24.
-    :param feat_multiplier: (optional) multiply the number of feature by this nummber at each new level. Default is 1.
+    :param feat_multiplier: (optional) multiply the number of feature by this number at each new level. Default is 1.
     :param activation: (optional) activation function. Can be 'elu', 'relu'.
     :param compute_distances: (optional) whether to add Hausdorff and mean surface distance evaluations to the default
     Dice evaluation. Default is True.
     :param compute_score_whole_structure: (optional) whether to compute the evaluation scores for another structure
     obtained by regrouping all segmented regions. Default is True.
-    :param recompute: (optional) whether to recompute result files even if they already exists."""
+    :param recompute: (optional) whether to recompute result files even if they already exist."""
 
     # create result folder
     utils.mkdir(validation_main_dir)
@@ -133,7 +133,7 @@ def plot_validation_curves(list_validation_dirs, architecture_names=None, eval_i
     :param eval_indices: (optional) compute the average Dice loss on a subset of labels indicated by the specified
     indices. Can be a sequence, 1d numpy array, or the path to such an array.
     :param skip_first_dice_row: if eval_indices is None, skip the first row of the dice matrices (usually background)
-    :param size_max_circle: (optional) size of the marker for epochs achieveing the best validation scores.
+    :param size_max_circle: (optional) size of the marker for epochs achieving the best validation scores.
     :param figsize: (optional) size of the figure to draw.
     :param fontsize: (optional) fontsize used for the graph."""
 

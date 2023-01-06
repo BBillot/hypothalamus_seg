@@ -6,7 +6,7 @@ Copyright 2020 Benjamin Billot
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in
 compliance with the License. You may obtain a copy of the License at
-http://www.apache.org/licenses/LICENSE-2.0
+https://www.apache.org/licenses/LICENSE-2.0
 Unless required by applicable law or agreed to in writing, software distributed under the License is
 distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 implied. See the License for the specific language governing permissions and limitations under the
@@ -56,7 +56,7 @@ def training(image_dir,
              bias_field_std=.5,
              bias_shape_factor=.025,
              same_bias_for_all_channels=False,
-             augment_intensitites=True,
+             augment_intensities=True,
              noise_std=1.,
              augment_channels_separately=True,
              n_levels=5,
@@ -83,7 +83,7 @@ def training(image_dir,
 
     :param image_dir: path of folder with all input images, or to a single image (if only one training example)
     :param labels_dir: path of folder with all input label maps, or to a single label map (if only one training example)
-    labels maps and images are likend by sorting order.
+    labels maps and images are matched by sorting order.
     :param model_dir: path of a directory where the models will be saved during training.
 
     #---------------------------------------------- Augmentation parameters ----------------------------------------------
@@ -116,7 +116,7 @@ def training(image_dir,
     :param rotation_bounds: (optional) same as scaling bounds but for the rotation angle, except that for case 1 the
     bounds are centred on 0 rather than 1, i.e. (0+rotation_bounds[i], 0-rotation_bounds[i]).
     Default is rotation_bounds = 15.
-    :param enable_90_rotations: (optional) wheter to rotate the input by a random angle chosen in {0, 90, 180, 270}.
+    :param enable_90_rotations: (optional) whether to rotate the input by a random angle chosen in {0, 90, 180, 270}.
     This is done regardless of the value of rotation_bounds. If true, a different value is sampled for each dimension.
     :param shearing_bounds: (optional) same as scaling bounds. Default is shearing_bounds = 0.012.
     :param translation_bounds: (optional) same as scaling bounds. Default is translation_bounds = False, but we
@@ -131,32 +131,32 @@ def training(image_dir,
     The bias field is obtained by sampling a first small tensor from a normal distribution, resizing it to
     full size, and rescaling it to positive values by taking the voxel-wise exponential. bias_field_std designates the
     std dev of the normal distribution from which we sample the first tensor.
-    Set to 0 to completely deactivate biad field corruption.
+    Set to 0 to completely deactivate bias field corruption.
     :param bias_shape_factor: (optional) If bias_field_std is not False, this designates the ratio between the size of
     the input label maps and the size of the first sampled tensor for synthesising the bias field.
     :param same_bias_for_all_channels: (optional) If bias_field_std is not False, whether to apply the same bias field
     to all channels or not.
 
     # Intensity augmentation parameters
-    :param augment_intensitites: (optional) whether to augment the intensities of the images with gamma augmentation.
+    :param augment_intensities: (optional) whether to augment the intensities of the images with gamma augmentation.
     :param noise_std: (optional) if augment_intensities is True, maximum value for the standard deviation of the normal
     distribution from which we sample a Gaussian white noise. Set to False to deactivate white noise augmentation.
     Default value is 1.
-    :param augment_channels_separately: (optional) whether to augment the intensities of each channel indenpendently.
+    :param augment_channels_separately: (optional) whether to augment the intensities of each channel independently.
     Only applied if augment_intensity is True, and the training images have several channels. Default is True.
 
     # ------------------------------------------ UNet architecture parameters ------------------------------------------
     :param n_levels: (optional) number of level for the Unet. Default is 5.
     :param nb_conv_per_level: (optional) number of convolutional layers per level. Default is 2.
     :param conv_size: (optional) size of the convolution kernels. Default is 2.
-    :param unet_feat_count: (optional) number of feature for the first layr of the Unet. Default is 24.
-    :param feat_multiplier: (optional) multiply the number of feature by this nummber at each new level. Default is 1.
+    :param unet_feat_count: (optional) number of feature for the first layer of the Unet. Default is 24.
+    :param feat_multiplier: (optional) multiply the number of feature by this number at each new level. Default is 1.
     :param activation: (optional) activation function. Can be 'elu', 'relu'.
 
     # ----------------------------------------------- Training parameters ----------------------------------------------
     :param lr: (optional) learning rate for the training. Default is 1e-4
-    :param lr_decay: (optional) learing rate decay. Default is 0, where no decay is applied.
-    :param wl2_epochs: (optional) number of epohs for which the network (except the soft-max layer) is trained with L2
+    :param lr_decay: (optional) learning rate decay. Default is 0, where no decay is applied.
+    :param wl2_epochs: (optional) number of epochs for which the network (except the soft-max layer) is trained with L2
     norm loss function. Default is 5.
     :param dice_epochs: (optional) number of epochs with the soft Dice loss function. default is 200.
     :param steps_per_epoch: (optional) number of steps per epoch. Default is 1000. Since no online validation is
@@ -200,7 +200,7 @@ def training(image_dir,
                                                   bias_field_std=bias_field_std,
                                                   bias_shape_factor=bias_shape_factor,
                                                   same_bias_for_all_channels=same_bias_for_all_channels,
-                                                  apply_intensity_augmentation=augment_intensitites,
+                                                  apply_intensity_augmentation=augment_intensities,
                                                   noise_std=noise_std,
                                                   augment_channels_separately=augment_channels_separately)
     unet_input_shape = augmentation_model.output[0].get_shape().as_list()[1:]

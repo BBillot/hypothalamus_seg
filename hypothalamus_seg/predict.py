@@ -6,7 +6,7 @@ Copyright 2020 Benjamin Billot
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in
 compliance with the License. You may obtain a copy of the License at
-http://www.apache.org/licenses/LICENSE-2.0
+https://www.apache.org/licenses/LICENSE-2.0
 Unless required by applicable law or agreed to in writing, software distributed under the License is
 distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 implied. See the License for the specific language governing permissions and limitations under the
@@ -85,7 +85,7 @@ def predict(path_images,
     :param sigma_smoothing: (optional) If not None, the posteriors are smoothed with a gaussian kernel of the specified
     standard deviation.
     :param keep_biggest_component: (optional) whether to only keep the biggest component in the predicted segmentation.
-    :param conv_size: (optional) size of unet's convolution masks. Default is 3.
+    :param conv_size: (optional) size of unet convolution masks. Default is 3.
     :param n_levels: (optional) number of levels for unet. Default is 5.
     :param nb_conv_per_level: (optional) number of convolution layers per level. Default is 2.
     :param unet_feat_count: (optional) number of features for the first layer of the unet. Default is 24.
@@ -202,9 +202,7 @@ def predict(path_images,
 
 
 def prepare_output_files(path_images, out_seg, out_posteriors, out_resampled, out_volumes, recompute):
-    '''
-    Prepare output files.
-    '''
+    """Prepare output files."""
 
     # check inputs
     assert path_images is not None, 'please specify an input file/folder (--i)'

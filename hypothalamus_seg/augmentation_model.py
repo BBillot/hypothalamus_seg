@@ -91,7 +91,7 @@ def build_augmentation_model(im_shape,
     :param rotation_bounds: (optional) same as scaling bounds but for the rotation angle, except that for cases 1
     and 2, the bounds are centred on 0 rather than 1, i.e. [0+rotation_bounds[i], 0-rotation_bounds[i]].
     Default is rotation_bounds = 15.
-    :param enable_90_rotations: (optional) wheter to rotate the input by a random angle chosen in {0, 90, 180, 270}.
+    :param enable_90_rotations: (optional) whether to rotate the input by a random angle chosen in {0, 90, 180, 270}.
     This is done regardless of the value of rotation_bounds. If true, a different value is sampled for each dimension.
     :param shearing_bounds: (optional) same as scaling bounds. Default is shearing_bounds = 0.012.
     :param translation_bounds: (optional) same as scaling bounds. Default is translation_bounds = False, but we
@@ -104,16 +104,17 @@ def build_augmentation_model(im_shape,
     :param bias_field_std: (optional) If strictly positive, this triggers the corruption of synthesised images with a
     bias field. It is obtained by sampling a first small tensor from a normal distribution, resizing it to full size,
     and rescaling it to positive values by taking the voxel-wise exponential. bias_field_std designates the std dev of
-    the normal distribution from which we sample the first tensor. Set to 0 to deactivate biad field corruption.
+    the normal distribution from which we sample the first tensor. Set to 0 to deactivate bias field corruption.
     :param bias_shape_factor: (optional) If bias_field_std is strictly positive, this designates the ratio between the
     size of the input label maps and the size of the first sampled tensor for synthesising the bias field.
     :param same_bias_for_all_channels: (optional) If bias_field_std is not False, whether to apply the same bias field
     to all channels or not.
-    :param augment_intensitites: (optional) whether to augment the intensities of the images with gamma augmentation.
+    :param apply_intensity_augmentation: (optional) whether to augment the intensities of the images with gamma
+    augmentation.
     :param noise_std: (optional) if augment_intensities is True, maximum value for the standard deviation of the normal
     distribution from which we sample a Gaussian white noise. Set to False to deactivate white noise augmentation.
     Default value is 1.
-    :param augment_channels_separately: (optional) whether to augment the intensities of each channel indenpendently.
+    :param augment_channels_separately: (optional) whether to augment the intensities of each channel independently.
     Only applied if augment_intensity is True, and the training images have several channels. Default is True.
     """
 

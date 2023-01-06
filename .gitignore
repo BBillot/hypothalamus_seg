@@ -12,7 +12,7 @@ hypo_seg_windows.zip
 hypothalamus_seg/check_augm_model.py
 hypothalamus_seg/check_model.py
 hypothalamus_seg/label_fusion.py
-hypothalamus_seg/training_gpuid.py
+hypothalamus_seg/training_*
 
 scripts/check_augm_model.py
 scripts/check_model.py
